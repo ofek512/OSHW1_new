@@ -74,7 +74,15 @@ int _parseCommandLine(const char *cmd_line, char **args)
 bool _isBackgroundComamnd(const char *cmd_line)
 {
     const string str(cmd_line);
-    return str[str.find_last_not_of(WHITESPACE)] == '&';
+    size_t last_char_idx = str.find_last_not_of(WHITESPACE);
+
+    Check if a non-whitespace character was found
+    if (last_char_idx == std::string::npos)
+    {
+        return false; // Empty or all-whitespace string
+    }
+
+    return str[last_char_idx] == '&';
 }
 
 void free_args(char **args, int num_of_args)
@@ -89,22 +97,30 @@ void free_args(char **args, int num_of_args)
 void _removeBackgroundSign(char *cmd_line)
 {
     const string str(cmd_line);
-    // find last character other than spaces
     unsigned int idx = str.find_last_not_of(WHITESPACE);
-    // if all characters are spaces then return
+
     if (idx == string::npos)
     {
         return;
     }
-    // if the command line does not end with & then return
     if (cmd_line[idx] != '&')
     {
         return;
     }
-    // replace the & (background sign) with space and then remove all tailing spaces.
-    cmd_line[idx] = ' ';
-    // truncate the command line string up to the last non-space character
-    cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
+
+    // 1. Find the last real character *before* the '&'
+    size_t end_of_cmd = str.find_last_not_of(WHITESPACE, idx - 1);
+
+    if (end_of_cmd == std::string::npos)
+    {
+        // The command was just "&" or "& "
+        cmd_line[0] = 0; 
+    }
+    else
+    {
+        // 2. Truncate the string right after that character
+        cmd_line[end_of_cmd + 1] = 0;
+    }
 }
 
 char **init_args()
