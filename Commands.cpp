@@ -269,6 +269,8 @@ Command *SmallShell::CreateCommand(char *cmd_line)
     if (firstWord == "showpid")
     {
         return new ShowPidCommand(cmd_line);
+    } else if (firstWord == "chprompt") {
+        return new ChpromptCommand(cmd_line);
     }
 
     // if nothing else is matched, we treat as external command.
@@ -607,6 +609,20 @@ void ShowPidCommand::execute()
 {
     SmallShell &shell = SmallShell::getInstance();
     cout << "smash pid is " << shell.pid << endl;
+    return;
+}
+
+ChpromptCommand::ChpromptCommand(char *cmd_line) : ChpromptCommand(cmd_line){}
+
+void ChpromptCommand::execute(){
+    SmallShell &shell = SmallShell::getInstance();
+    char *parsedArgs[COMMAND_MAX_ARGS] = {};
+    int argsRes = _parseCommandLine(cmd_line, parsedArgs);
+    if(argsRes == 1){
+        shell.setPrompt("smash");
+    } else {
+        shell.setPrompt(parsedArgs[1]);
+    }
     return;
 }
 

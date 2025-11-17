@@ -172,6 +172,15 @@ public:
     void execute() override;
 }; // DONE
 
+class ChpromptCommand : public BuiltInCommand{
+public:
+    explicit ChpromptCommand(char *cmd_line);
+
+    virtual ~ChpromptCommand() = default;
+
+    void execute() override;
+}
+
 //////////////////////////////--------------External commands-------/////////////////////////////
 
 
