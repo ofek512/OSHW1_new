@@ -216,6 +216,13 @@ public:
     void execute() override;
 };
 
+class UnsetenvCommand : public BuiltInCommand {
+public:
+    explicit UnsetenvCommand(char *cmd_line);
+    virtual ~UnsetenvCommand() = default;
+    void execute() override;
+};
+
 //////////////////////////////--------------External commands-------/////////////////////////////
 
 
