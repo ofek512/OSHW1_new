@@ -1,4 +1,5 @@
 #TODO: replace ID with your own IDS, for example: 123456789_123456789
+
 SUBMITTERS := <student1-ID>_<student2-ID>
 COMPILER := g++
 COMPILER_FLAGS := --std=c++11 -Wall
@@ -8,6 +9,9 @@ HDRS := Commands.h signals.h
 TESTS_INPUTS := $(wildcard test_input*.txt)
 TESTS_OUTPUTS := $(subst input,output,$(TESTS_INPUTS))
 SMASH_BIN := smash
+
+all: $(SMASH_BIN)
+
 
 test: $(TESTS_OUTPUTS)
 

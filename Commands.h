@@ -74,6 +74,7 @@ public:
         ~JobEntry() = default;                                                                                                                                   // maybe delete cmd?
         bool operator<(const JobEntry &other) const;
     };
+
     list<JobEntry *> jobsList;
 
     std::unordered_map<int, JobEntry *> job_map; // I think we need to add it for more efficient search
@@ -179,7 +180,25 @@ public:
     virtual ~ChpromptCommand() = default;
 
     void execute() override;
-}
+}; // DONE
+
+class FGCommand : public BuiltInCommand {
+public:
+    explicit FGCommand(char *cmd_line);
+
+    virtual ~FGCommand() = default;
+
+    void execute() override;
+}; // DONE
+
+class KillCommand : public BuiltInCommand {
+public:
+    explicit KillCommand(char *cmd_line);
+
+    virtual ~KillCommand() = default;
+
+    void execute() override;
+};
 
 //////////////////////////////--------------External commands-------/////////////////////////////
 

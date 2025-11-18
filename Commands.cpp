@@ -76,7 +76,7 @@ bool _isBackgroundComamnd(const char *cmd_line)
     const string str(cmd_line);
     size_t last_char_idx = str.find_last_not_of(WHITESPACE);
 
-    Check if a non-whitespace character was found
+    //Check if a non-whitespace character was found
     if (last_char_idx == std::string::npos)
     {
         return false; // Empty or all-whitespace string
@@ -443,6 +443,7 @@ void JobsList::killAllJobs()
             delete *listIt;
         }
     }
+    max_id = -1;
     jobsList.clear(); // check if we need to do clear
 }
 
@@ -626,7 +627,149 @@ void ChpromptCommand::execute(){
     return;
 }
 
+FGCommand::FGCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
+void FGCommand::execute() {
+    SmallShell &shell = SmallShell::getInstance();
+    JobsList* jobs = shell.getJobs();
+
+    // remove all jobs that finished.
+    jobs->removeFinishedJobs();
+
+    // first we need to extract second word in cmd_line to see if its a number.
+    char **args = init_args();
+    if (!args) {
+        cerr << "smash error: malloc failed" << endl;
+        return;
+    }
+    int num_of_args = _parseCommandLine(cmd_line, args);
+    if (num_of_args > 2) {
+        cerr << "smash error: fg: invalid arguments" << endl;
+        return;
+    }
+    // If there are no arguments, we bring the job with max id to the foreground.
+    else if (num_of_args == 1) {
+        if (jobs->max_id == -1) {
+            cerr << "smash error: fg: jobs list is empty" << endl;
+            return;
+        }
+        JobsList::JobEntry* job = jobs->getJobById(jobs->max_id);
+        if (!job) {
+            cerr << "smash error: fg: jobs list is empty" << endl;
+        }
+        // check if job is stopped
+        if (job->isStopped) {
+            if (kill(job->pid, SIGCONT) < 0) {
+                cerr << "smash error: kill failed" << endl;
+                free_args(args, num_of_args);
+                return;
+            }
+        }
+        cout << job->command << " " << job->pid << endl;
+        jobs->removeJobById(job->jobId);
+        shell.current_process = job->pid;
+
+        // wait for the process to finish
+        int status;
+        if (waitpid(job->pid, &status, 0) == -1) {
+            cerr << "smash error: waitpid failed" << endl;
+            free_args(args, num_of_args);
+            shell.current_process = -1;
+            return;
+        }
+        shell.current_process = -1;
+    }
+    // got two arguments, need to find job with id argument.
+    else {
+        // check if second argument is a legit number
+        string secondArg = string(args[1]);
+        if (!is_legit_num(secondArg)) {
+            cerr << "smash error: fg: invalid arguments" << endl;
+            free_args(args, num_of_args);
+            return;
+        }
+        int jobId = stoi(secondArg);
+        JobsList::JobEntry* job = jobs->getJobById(jobId);
+        if (!job) {
+            cerr << "smash error: fg: job-id " << jobId << " does not exist" << endl;
+            free_args(args, num_of_args);
+            return;
+        }
+        // check if job is stopped
+        if (job->isStopped) {
+            if (kill(job->pid, SIGCONT) < 0) {
+                cerr << "smash error: kill failed" << endl;
+                free_args(args, num_of_args);
+                return;
+            }
+        }
+        cout << job->command << " " << job->pid << endl;
+        jobs->removeJobById(job->jobId);
+        shell.current_process = job->pid;
+        // wait for the process to finish
+        int status;
+        if (waitpid(job->pid, &status, 0) == -1) {
+            cerr << "smash error: waitpid failed" << endl;
+            free_args(args, num_of_args);
+            shell.current_process = -1;
+            return;
+        }
+        shell.current_process = -1;
+    }
+    free_args(args, num_of_args);
+}
+
+KillCommand::KillCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+void KillCommand::execute() {
+    char **args = init_args();
+    SmallShell &shell = SmallShell::getInstance();
+    if (!args) {
+        cerr << "smash error: malloc failed" << endl;
+        return;
+    }
+    int num_of_args = _parseCommandLine(cmd_line, args);
+    if (num_of_args != 3) {
+        cerr << "smash error: kill: invalid arguments" << endl;
+    }
+    int signum = 0;
+    int jobId = 0;
+
+    // check if jobId number is valid
+    if (!is_legit_num(string(args[2]))) {
+        cerr << "smash error: kill: invalid arguments" << endl;
+        free_args(args, num_of_args);
+        return;
+    }
+    jobId = stoi(string(args[2]));
+
+    //check if signal number is valid
+    if (!extract_signal_number(args[1], signum)) {
+        cerr << "smash error: kill: invalid arguments" << endl;
+        free_args(args, num_of_args);
+        return;
+    }
+
+    JobsList::JobEntry* job = shell.getJobs()->getJobById(jobId);
+    if (!job) {
+        cerr << "smash error: kill: job-id " << jobId << " does not exist" << endl;
+        free_args(args, num_of_args);
+        return;
+    }
+    if (kill(job->pid, signum) < 0) {
+        cerr << "smash error: kill failed" << endl;
+        free_args(args, num_of_args);
+        return;
+    }
+
+    cout << "signal " << signum << " was sent to pid " << job->pid << endl;
+    if (signum == SIGSTOP) {
+        job->isStopped = true;
+    } else if (signum == SIGCONT) {
+        job->isStopped = false;
+    }
+    free_args(args, num_of_args);
+}
 /////////////////////////////--------------External commands-------//////////////////////////////
 
 /// ExternalCommand class
