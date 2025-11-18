@@ -950,7 +950,184 @@ void UnsetenvCommand::execute() {
 
 /////////////////////////////--------------External commands-------//////////////////////////////
 
-/// ExternalCommand class
+ExternalCommand::ExternalCommand(char *cmd_line) : Command(cmd_line)
+{
+    // Store the original command line
+    backGround = _isBackgroundComamnd(cmd_line);
+    alias_name = ""; // Initialize alias_name
+
+    // Create a clean version of the command for segments
+    std::string clean_cmd_line = cmd_line;
+    // todo check this
+    if (backGround)
+    {
+        full_cmd = string(cmd_line);
+        _removeBackgroundSign(cmd_line);
+        // Create a modifiable copy of the command line
+        char *cmd_copy = strdup(cmd_line);
+        if (cmd_copy)
+        {
+            // Store the clean command segments
+            createSegments(cmd_copy, cmd_segments);
+            free(cmd_copy);
+        }
+    }
+    else
+    {
+        // If not a background command, just use as is
+        createSegments(cmd_line, cmd_segments);
+    }
+}
+
+void ExternalCommand::execute()
+{
+    if (cmd_segments.empty())
+    {
+        return; // Nothing to execute
+    }
+
+    // Create a clean version of the command line for execution
+    char *cmd_copy = strdup(cmd_line);
+    if (!cmd_copy)
+    {
+        perror("smash error: memory allocation failed");
+        return;
+    }
+
+    // If it's a background command, remove the & sign
+    if (backGround)
+    {
+        _removeBackgroundSign(cmd_copy);
+    }
+
+    // Parse the cleaned command
+    char **args = init_args();
+    if (!args)
+    {
+        perror("smash error: memory allocation failed");
+        free(cmd_copy);
+        return;
+    }
+
+    int num_args = _parseCommandLine(cmd_copy, args);
+    free(cmd_copy); // Done with the copy
+
+    if (num_args == 0)
+    {
+        free_args(args, num_args);
+        return;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0)
+    {
+        // Fork failed
+        perror("smash error: fork failed");
+        free_args(args, num_args);
+        return;
+    }
+
+    if (pid == 0)
+    {
+        // Child process
+        setpgrp(); // Set process group ID to dissociate from shell
+
+        // Execute the command using execvp which searches in PATH
+        execvp(args[0], args);
+
+        // If execvp failed, report error and exit
+        perror("smash error: execvp failed");
+        free_args(args, num_args);
+        exit(1);
+    }
+    else
+    {
+        // Parent process
+        SmallShell &smash = SmallShell::getInstance();
+
+        if (!backGround)
+        {
+            // Wait for child process to complete if not a background command
+            smash.current_process = pid;
+            if (waitpid(pid, nullptr, 0) == -1)
+            {
+                perror("smash error: waitpid failed");
+            }
+            smash.current_process = -1;
+        }
+        else
+        {
+            // Add job to jobs list if it's a background command
+            smash.getJobs()->addJob(this, pid, false);
+        }
+
+        free_args(args, num_args);
+    }
+}
+
+ComplexExternalCommand::ComplexExternalCommand(char *cmd_line) : Command(cmd_line), bash_args()
+{
+    backGround = _isBackgroundComamnd(cmd_line);
+
+    if (backGround)
+    {
+        _removeBackgroundSign(cmd_line);
+    }
+
+    bash_args[0] = (char *)"/bin/bash";
+    bash_args[1] = (char *)"-c";
+    bash_args[2] = (char *)cmd_line;
+    bash_args[3] = nullptr;
+}
+
+void ComplexExternalCommand::execute()
+{
+    pid_t pid = fork();
+
+    if (pid == -1)
+    {
+        perror("smash error: fork failed");
+        return;
+    }
+    // Child process
+    if (pid == 0)
+    {
+
+        if (setpgrp() == -1)
+        {
+            perror("smash error: setpgrp failed");
+            return;
+        }
+
+        execv("/bin/bash", bash_args);
+
+        perror("smash error: execv failed");
+        exit(1);
+    }
+    else
+    {
+        // Parent process
+        SmallShell &smash = SmallShell::getInstance();
+
+        if (!backGround)
+        {
+            smash.current_process = pid;
+            int status;
+            // Run in background
+            if (waitpid(pid, &status, 0) == -1)
+            {
+                perror("smash error: waitpid failed");
+                return;
+            }
+            smash.current_process = -1;
+        }
+        else
+        {
+            // Add to joblist
+            smash.getJobs()->addJob(this, pid, false);
+        }
+    }
+}
 
 /////////////////////////////--------------Special commands-------//////////////////////////////
 

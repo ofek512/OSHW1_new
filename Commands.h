@@ -224,7 +224,32 @@ public:
 };
 
 //////////////////////////////--------------External commands-------/////////////////////////////
+class ExternalCommand : public Command
+{
+public:
+    string full_cmd;
 
+    ExternalCommand(char *cmd_line);
+
+    virtual ~ExternalCommand(){}
+
+    string getCommandS() override;
+
+    void execute() override;
+}; // DONE
+
+class ComplexExternalCommand : public Command
+{
+public:
+    char *bash_args[4];
+    ComplexExternalCommand(char *cmd_line);
+
+    virtual ~ComplexExternalCommand()
+    {
+    }
+
+    void execute() override;
+}; // DONE
 
 
 
