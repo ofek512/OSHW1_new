@@ -271,6 +271,10 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         return new ShowPidCommand(cmd_line);
     } else if (firstWord == "chprompt") {
         return new ChpromptCommand(cmd_line);
+    } else if (firstWord == "fg") {
+        return new FGCommand(cmd_line);
+    } else if (firstWord == "kill") {
+        return new KillCommand(cmd_line);
     }
 
     // if nothing else is matched, we treat as external command.
@@ -770,6 +774,8 @@ void KillCommand::execute() {
     }
     free_args(args, num_of_args);
 }
+
+
 /////////////////////////////--------------External commands-------//////////////////////////////
 
 /// ExternalCommand class
