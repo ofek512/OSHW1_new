@@ -209,6 +209,13 @@ public:
     void execute() override;
 };
 
+class UnaliasCommand : public BuiltInCommand {
+public:
+    explicit UnaliasCommand(char *cmd_line);
+    virtual ~UnaliasCommand() = default;
+    void execute() override;
+};
+
 //////////////////////////////--------------External commands-------/////////////////////////////
 
 

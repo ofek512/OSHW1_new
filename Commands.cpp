@@ -277,6 +277,8 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         return new KillCommand(cmd_line);
     } else if (firstWord == "alias") {
         return new AliasCommand(cmd_line);
+    } else if (firstWord == "unalias") {
+        return new UnaliasCommand(cmd_line);
     }
 
     // if nothing else is matched, we treat as external command.
@@ -826,6 +828,36 @@ void AliasCommand::execute() {
     }
 
     SmallShell::getInstance().setAlias(aliasName, aliasCommand);
+}
+
+UnaliasCommand::UnaliasCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+void UnaliasCommand::execute() {
+    char **args = init_args();
+    if (!args) {
+        cerr << "smash error: malloc failed" << endl;
+        return;
+    }
+    int num_of_args = _parseCommandLine(cmd_line, args);
+    if (num_of_args == 1) {
+        cerr << "smash error: unalias: not enough arguments" << endl;
+        free_args(args, num_of_args);
+        return;
+    }
+
+    // try to remove aliases until the first not valid alias.
+    for (int i = 1; i < num_of_args; i++) {
+        string current_alias(args[i]);
+
+        //check if alias even exists
+        if (!SmallShell::getInstance().removeAlias(current_alias))
+        {
+            cerr << "smash error: unalias: " << current_alias << " alias does not exist" << endl;
+            free_args(args, num_of_args);
+            return;
+        }
+    }
+    free_args(args, num_of_args);
 }
 /////////////////////////////--------------External commands-------//////////////////////////////
 
