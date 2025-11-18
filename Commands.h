@@ -200,6 +200,15 @@ public:
     void execute() override;
 };
 
+class AliasCommand : public BuiltInCommand {
+public:
+    explicit AliasCommand(char *cmd_line);
+
+    virtual ~AliasCommand() = default;
+
+    void execute() override;
+};
+
 //////////////////////////////--------------External commands-------/////////////////////////////
 
 

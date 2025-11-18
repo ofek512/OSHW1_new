@@ -275,6 +275,8 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         return new FGCommand(cmd_line);
     } else if (firstWord == "kill") {
         return new KillCommand(cmd_line);
+    } else if (firstWord == "alias") {
+        return new AliasCommand(cmd_line);
     }
 
     // if nothing else is matched, we treat as external command.
@@ -775,7 +777,56 @@ void KillCommand::execute() {
     free_args(args, num_of_args);
 }
 
+AliasCommand::AliasCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
+void AliasCommand::execute() {
+    // if command only alias, print all aliases.
+    if (cmd_segments.size() == 1) {
+        vector<string> aliases;
+        SmallShell::getInstance().getAllAlias(aliases);
+        for (const string &alias : aliases) {
+            cout << alias << endl;
+        }
+        return;
+    }
+
+    // else, we create an alias for the command.
+    string full_command = cmd_line;
+    if (this->backGround)
+    {
+        removeBackgroundSignFromString(full_command);
+    }
+    // trim the command
+    full_command = _trim(full_command);
+    static const std::regex aliasPattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
+    std::smatch matches;
+    bool matched = std::regex_search(full_command, matches, aliasPattern);
+
+    if (!matched)
+    {
+        cerr << "smash error: alias: invalid alias format" << std::endl;
+        return;
+    }
+
+    string aliasName = matches[1];
+    string aliasCommand = matches[2];
+
+    //check if alias is reserved command.
+    if (SmallShell::getInstance().validCommand(aliasName))
+    {
+        cerr << "smash error: alias: " << aliasName << " already exists or is a reserved command" << std::endl;
+        return;
+    }
+
+    //check if alias already exists
+    if (SmallShell::getInstance().getAlias(aliasName).compare("") != 0)
+    {
+        cerr << "smash error: alias: " << aliasName << " already exists or is a reserved command" << std::endl;
+        return;
+    }
+
+    SmallShell::getInstance().setAlias(aliasName, aliasCommand);
+}
 /////////////////////////////--------------External commands-------//////////////////////////////
 
 /// ExternalCommand class
