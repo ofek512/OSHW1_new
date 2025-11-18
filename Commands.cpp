@@ -623,7 +623,7 @@ void ShowPidCommand::execute()
     return;
 }
 
-ChpromptCommand::ChpromptCommand(char *cmd_line) : ChpromptCommand(cmd_line){}
+ChpromptCommand::ChpromptCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void ChpromptCommand::execute(){
     SmallShell &shell = SmallShell::getInstance();
@@ -1131,3 +1131,267 @@ void ComplexExternalCommand::execute()
 
 /////////////////////////////--------------Special commands-------//////////////////////////////
 
+PipeCommand::PipeCommand(char *cmd_line, Type command_type) : Command(cmd_line), command_type(command_type)
+{
+    string cmd1, cmd2;
+    size_t index;
+    string input(cmd_line);
+    // Look for the delimiter
+    if (command_type == STDOUT)
+    {
+        index = input.find('|');
+    }
+    else
+    {
+        index = input.find("|&");
+    }
+
+    // Retrieving the first command
+    cmd1 = _trim(input.substr(0, index));
+    command1 = (char *)malloc(sizeof(char) * (cmd1.length() + 1));
+
+    // Check whether malloc succeed
+    if (!command1)
+    {
+        perror("smash error: malloc failed");
+        throw bad_alloc();
+    }
+
+    strcpy(command1, cmd1.c_str());
+
+    // Retrieving the second command
+
+    cmd2 = _trim(input.substr(index + command_type));
+    command2 = (char *)malloc(sizeof(char) * (cmd2.length() + 1));
+
+    // Check whether malloc succeed
+    if (!command2)
+    {
+        perror("smash error: malloc failed");
+        free(command1);
+        throw bad_alloc();
+    }
+
+    strcpy(command2, cmd2.c_str());
+}
+
+void PipeCommand::execute()
+{
+    int fd[2];
+    if (pipe(fd) == -1)
+    {
+        perror("smash error: pipe failed");
+        return;
+    }
+
+    pid_t pid1 = fork();
+    // Check whether fork succeed
+    if (pid1 == -1)
+    {
+        perror("smash error: fork failed");
+        close_pipe(fd);
+        return;
+    }
+
+    // Writer process
+    if (pid1 == 0)
+    {
+        // Set gid to pid
+        if (setpgrp() == -1)
+        {
+            perror("smash error: setpgrp failed");
+            close_pipe(fd);
+            exit(1);
+        }
+        // Redirect output
+        if (command_type == STDOUT)
+        {
+            if (dup2(fd[1], 1) == -1)
+            {
+                perror("smash error: dup2 failed");
+                close_pipe(fd);
+                exit(1);
+            }
+        }
+        else
+        {
+            if (dup2(fd[1], 2) == -1)
+            {
+                perror("smash error: dup2 failed");
+                close_pipe(fd);
+                exit(1);
+            }
+        }
+        if (!close_pipe(fd))
+            exit(1);
+        SmallShell::getInstance().executeCommand(command1);
+        exit(1);
+    }
+
+    pid_t pid2 = fork();
+    if (pid2 == -1)
+    {
+        perror("smash error: fork failed");
+        close_pipe(fd);
+        return;
+    }
+
+    // Reader process
+    if (pid2 == 0)
+    {
+        // Change gid to pid
+        if (setpgrp() == -1)
+        {
+            perror("smash error: setpgrp failed");
+            close_pipe(fd);
+            exit(1);
+        }
+
+        // Redirect input
+        if (dup2(fd[0], 0) == -1)
+        {
+            perror("smash error: dup2 failed");
+            close_pipe(fd);
+            exit(1);
+        }
+        if (!close_pipe(fd))
+            exit(1);
+        SmallShell::getInstance().executeCommand(command2);
+        exit(1);
+    }
+
+    // Closing pipe
+    if (!close_pipe(fd))
+        return;
+
+    // Wait child processes
+
+    if (waitpid(pid1, nullptr, WUNTRACED) == -1)
+    {
+        perror("smash error: waitpid failed");
+        return;
+    }
+
+    if (waitpid(pid2, nullptr, WUNTRACED) == -1)
+    {
+        perror("smash error: waitpid failed");
+        return;
+    }
+}
+
+bool PipeCommand::close_pipe(int *fd)
+{
+    bool ret = true;
+    if (close(fd[0]) == -1)
+    {
+        perror("smash error: close failed");
+        ret = false;
+    }
+    if (close(fd[1]) == -1)
+    {
+        perror("smash error: close failed");
+        ret = false;
+    }
+    return ret;
+} // Helper function to close both file descriptors of the pipe
+
+PipeCommand::~PipeCommand()
+{
+    free(command1);
+    free(command2);
+}
+
+RedirectionCommand::RedirectionCommand(char *cmd_line, command_type type) : Command(cmd_line), type(type)
+{
+    string cmd;
+    string file;
+    size_t index = 0;
+    string input(cmd_line);
+    if (type == CONCAT)
+    {
+        index = input.find(">>");
+    }
+    else
+    {
+        index = input.find('>');
+    }
+
+    // Parse command
+    cmd = _trim(input.substr(0, index));
+    command = (char *)malloc(sizeof(char) * (cmd.length() + 1));
+
+    // Check whether malloc succeed
+    if (!command)
+    {
+        perror("smash error: malloc failed");
+        throw bad_alloc();
+    }
+
+    strcpy(command, cmd.c_str());
+    if (_isBackgroundComamnd(command))
+    {
+        _removeBackgroundSign(command);
+    }
+
+    // Parse path
+    file = _trim(input.substr(index + type));
+    file_name = (char *)malloc(sizeof(char) * (file.length() + 1));
+
+    // Check whether malloc succeed
+    if (!file_name)
+    {
+        free(command);
+        perror("smash error: malloc failed");
+        throw bad_alloc();
+    }
+
+    strcpy(file_name, file.c_str());
+}
+
+RedirectionCommand::~RedirectionCommand()
+{
+    free(command);
+    free(file_name);
+}
+
+void RedirectionCommand::execute()
+{
+
+    int fd = 0;
+    stdout_copy = dup(1);
+
+    // Trying to open the file
+    if (type == CONCAT)
+    {
+        fd = open(file_name, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    }
+    else
+    {
+        fd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    }
+
+    // Check whether open succeed
+    if (fd < 0)
+    {
+        perror("smash error: open failed");
+        close(stdout_copy);
+        return;
+    }
+
+    // Check whether redirection succeed
+    if (dup2(fd, 1) == -1)
+    {
+        perror("smash error: dup2 failed");
+        close(fd);
+        close(stdout_copy);
+        return;
+    }
+
+    // Command execution
+    SmallShell::getInstance().executeCommand(command);
+
+    // Restore redirection to stdout
+    dup2(stdout_copy, 1);
+    close(fd);
+    close(stdout_copy);
+}

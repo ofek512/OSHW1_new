@@ -255,7 +255,51 @@ public:
 
 /////////////////////////////--------------Special commands-------//////////////////////////////
 
+class RedirectionCommand : public Command
+{
+    char *command;
+    char *file_name;
+    int stdout_copy;
 
+public:
+    enum command_type
+    {
+        TRUNCATE = 1,
+        CONCAT = 2
+    };
+
+    command_type type;
+
+    explicit RedirectionCommand(char *cmd_line, command_type type);
+
+    virtual ~RedirectionCommand();
+
+    void execute() override;
+}; // DONE
+
+class PipeCommand : public Command
+{
+    // TODO: Add your data members
+public:
+    char *command1;
+    char *command2;
+
+    enum Type
+    {
+        STDOUT = 1,
+        STDERR = 2
+    };
+
+    Type command_type;
+
+    PipeCommand(char *cmd_line, Type command_type);
+
+    virtual ~PipeCommand();
+
+    bool close_pipe(int *fd);
+
+    void execute() override;
+};
 
 void removeBackgroundSignFromString(std::string &cmd_line);
 
