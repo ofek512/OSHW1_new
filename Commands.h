@@ -223,6 +223,13 @@ public:
     void execute() override;
 };
 
+class SysinfoCommand : public BuiltInCommand {
+public:
+    explicit SysinfoCommand(char *cmd_line);
+    virtual ~SysinfoCommand() = default;
+    void execute() override;
+};
+
 //////////////////////////////--------------External commands-------/////////////////////////////
 class ExternalCommand : public Command
 {
@@ -298,6 +305,14 @@ public:
 
     bool close_pipe(int *fd);
 
+    void execute() override;
+};
+
+class WhoAmICommand : public Command
+{
+public:
+    WhoAmICommand(char *cmd_line);
+    virtual ~WhoAmICommand(){}
     void execute() override;
 };
 

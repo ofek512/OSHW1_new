@@ -281,6 +281,10 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         return new UnaliasCommand(cmd_line);
     } else if (firstWord == "unsetenv") {
         return new UnsetenvCommand(cmd_line);
+    } else if (firstWord == "sysinfo") {
+        return new SysinfoCommand(cmd_line);
+    } else if (firstWord == "whoami") {
+        return new WhoAmICommand(cmd_line);
     }
 
     // if nothing else is matched, we treat as external command.
@@ -947,6 +951,65 @@ void UnsetenvCommand::execute() {
     }
 }
 
+SysinfoCommand::SysinfoCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+void SysinfoCommand::execute()
+{
+    // 1. Get System, Hostname, Kernel, and Architecture
+    struct utsname sys_info;
+    if (uname(&sys_info) == -1)
+    {
+        perror("smash error: uname failed");
+        return;
+    }
+
+    // 2. Get Boot Time from /proc/stat
+    int fd = open("/proc/stat", O_RDONLY);
+    if (fd < 0)
+    {
+        perror("smash error: open failed");
+        return;
+    }
+
+    char buffer[8192]; // Buffer to read /proc/stat
+    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+    close(fd);
+
+    if (bytes_read <= 0)
+    {
+        perror("smash error: read failed");
+        return;
+    }
+    buffer[bytes_read] = '\0'; // Null-terminate the buffer
+    // Find the "btime" line
+    char *btime_line = strstr(buffer, "btime ");
+    if (btime_line == nullptr)
+    {
+        cerr << "smash error: could not parse /proc/stat for btime" << endl;
+        return;
+    }
+
+    long unsigned btime_stamp;
+    if (sscanf(btime_line, "btime %lu", &btime_stamp) != 1)
+    {
+        cerr << "smash error: could not parse btime value" << endl;
+        return;
+    }
+
+    // Format the timestamp
+    time_t boot_time = (time_t)btime_stamp;
+    struct tm *tm_info = localtime(&boot_time);
+
+    char time_str[100];
+    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
+
+    // 3. Print all information
+    cout << "System: " << sys_info.sysname << endl;
+    cout << "Hostname: " << sys_info.nodename << endl;
+    cout << "Kernel: " << sys_info.release << endl;
+    cout << "Architecture: " << sys_info.machine << endl;
+    cout << "Boot Time: " << time_str << endl;
+}
 
 /////////////////////////////--------------External commands-------//////////////////////////////
 
@@ -1130,6 +1193,97 @@ void ComplexExternalCommand::execute()
 }
 
 /////////////////////////////--------------Special commands-------//////////////////////////////
+WhoAmICommand::WhoAmICommand(char *cmd_line) : Command(cmd_line){}
+
+void WhoAmICommand::execute()
+{
+    // Get current userid and g
+    uid_t uid = getuid();
+    gid_t gid = getgid();
+
+    std::string uid_str = std::to_string(uid);
+
+    int fd = open("/etc/passwd", O_RDONLY);
+    if (fd == -1)
+    {
+        std::cerr << "smash error: whoami: cannot open passwd file" << std::endl;
+        return;
+    }
+
+    char buffer[4096] = {0};
+    read(fd, buffer, sizeof(buffer) - 1);
+    close(fd);
+
+    char *line = strtok(buffer, "\n");
+    while (line)
+    {
+        std::string entry(line);
+        size_t pos = 0;
+        std::string username;
+        std::string home_dir;
+
+        // Get username (field 1)
+        pos = entry.find(':');
+        if (pos == std::string::npos)
+        {
+            line = strtok(NULL, "\n");
+            continue;
+        }
+        username = entry.substr(0, pos);
+
+        // Skip password field (field 2)
+        entry = entry.substr(pos + 1);
+        pos = entry.find(':');
+        if (pos == std::string::npos)
+        {
+            line = strtok(NULL, "\n");
+            continue;
+        }
+        entry = entry.substr(pos + 1);
+
+        // Get UID (field 3)
+        pos = entry.find(':');
+        if (pos == std::string::npos)
+        {
+            line = strtok(NULL, "\n");
+            continue;
+        }
+        std::string uid_field = entry.substr(0, pos);
+        if (uid_field == uid_str)
+        {
+            // Found our user, now get home directory
+            entry = entry.substr(pos + 1);
+
+            // Skip GID and GECOS fields (fields 4 and 5)
+            for (int i = 0; i < 2; i++)
+            {
+                pos = entry.find(':');
+                if (pos == std::string::npos)
+                    break;
+                entry = entry.substr(pos + 1);
+            }
+
+            // Get home directory (field 6)
+            pos = entry.find(':');
+            if (pos != std::string::npos)
+            {
+                home_dir = entry.substr(0, pos);
+
+                // --- NEW OUTPUT FORMAT [cite: 423-425] ---
+                std::cout << uid << std::endl;
+                std::cout << gid << std::endl;
+                std::cout << username << " " << home_dir << std::endl;
+                // --- END OF NEW FORMAT ---
+
+                return; // Found user, we are done
+            }
+        }
+
+        line = strtok(NULL, "\n");
+    }
+
+    std::cerr << "smash error: whoami: user not found" << std::endl;
+}
 
 PipeCommand::PipeCommand(char *cmd_line, Type command_type) : Command(cmd_line), command_type(command_type)
 {
