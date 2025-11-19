@@ -316,6 +316,89 @@ public:
     void execute() override;
 };
 
+
+class DiskUsageCommand : public Command
+{
+private:
+    std::unordered_set<ino_t> counted_inodes;
+
+    long calculate_dir_size(const char *path)
+    {
+        struct stat st;
+        if (lstat(path, &st) != 0)
+        {
+            perror("smash error: lstat failed");
+            return 0; // can't stat this entry
+        }
+
+        // Only count each inode once (prevents double-counting hard links)
+        if (counted_inodes.insert(st.st_ino).second == false)
+        {
+            return 0;
+        }
+
+        // Start with this entry's blocks
+        long size = st.st_blocks * 512;
+
+        // If it's a directory (and not a symlink) recurse into it
+        if (S_ISDIR(st.st_mode) && !S_ISLNK(st.st_mode))
+        {
+            int fd = open(path, O_RDONLY | O_DIRECTORY);
+            if (fd < 0)
+            {
+                perror("smash error: open failed");
+                return size;
+            }
+
+            char buf[BUF_SIZE];
+            long bytes_read;
+
+            // Use getdents64 instead of readdir
+            while ((bytes_read = syscall(SYS_getdents64, fd, buf, BUF_SIZE)) > 0)
+            {
+                for (long bpos = 0; bpos < bytes_read;)
+                {
+                    struct linux_dirent64 *d = (struct linux_dirent64 *)(buf + bpos);
+
+                    if (strcmp(d->d_name, ".") == 0 ||
+                        strcmp(d->d_name, "..") == 0)
+                    {
+                        bpos += d->d_reclen; // Move to next entry
+                        continue;
+                    }
+
+                    char child_path[PATH_MAX];
+                    snprintf(child_path, sizeof(child_path), "%s/%s", path, d->d_name);
+
+                    // Recurse
+                    size += calculate_dir_size(child_path);
+
+                    bpos += d->d_reclen; // Move to next entry
+                }
+            }
+
+            close(fd);
+
+            if (bytes_read < 0)
+            {
+                perror("smash error: getdents64 failed");
+            }
+        }
+
+        return size;
+    }
+
+public:
+    DiskUsageCommand(char *cmd_line);
+
+    virtual ~DiskUsageCommand()
+    {
+    }
+
+    // execute() method in Commands.cpp does not need to be changed.
+    void execute() override;
+};
+
 void removeBackgroundSignFromString(std::string &cmd_line);
 
 #endif // SMASH_COMMAND_H_

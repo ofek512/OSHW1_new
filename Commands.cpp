@@ -285,6 +285,8 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         return new SysinfoCommand(cmd_line);
     } else if (firstWord == "whoami") {
         return new WhoAmICommand(cmd_line);
+    } else if (firstWord == "du") {
+        return new DiskUsageCommand(cmd_line);
     }
 
     // if nothing else is matched, we treat as external command.
@@ -1548,4 +1550,56 @@ void RedirectionCommand::execute()
     dup2(stdout_copy, 1);
     close(fd);
     close(stdout_copy);
+}
+
+DiskUsageCommand::DiskUsageCommand(char *cmd_line) : Command(cmd_line)
+{
+    createSegments(cmd_line, cmd_segments);
+}
+
+void DiskUsageCommand::execute()
+{
+    // Check number of arguments
+    if (cmd_segments.size() > 2)
+    {
+        std::cerr << "smash error: du: too many arguments" << std::endl;
+        return;
+    }
+
+    // Determine directory path
+    const char *dir_path;
+    if (cmd_segments.size() == 1)
+    {
+        // No path specified, use current directory
+        dir_path = ".";
+    }
+    else
+    {
+        dir_path = cmd_segments[1].c_str();
+    }
+
+    // Check if directory exists
+    DIR *dir = opendir(dir_path);
+    if (dir == NULL)
+    {
+        std::cerr << "smash error: du: directory " << dir_path << " does not exist" << std::endl;
+        return;
+    }
+    closedir(dir);
+
+    // Clear the inode tracking set before calculation
+    counted_inodes.clear();
+
+    // Calculate total size
+    long size_in_bytes = calculate_dir_size(dir_path);
+    if (size_in_bytes < 0)
+    {
+        std::cerr << "smash error: du: failed to calculate disk usage" << std::endl;
+        return;
+    }
+
+    long kb_size = (size_in_bytes + 1023) / 1024; // Round up to nearest KB
+
+    // Standard du format: just the size followed by the path
+    cout << "Total disk usage: " << kb_size << " KB" << std::endl;
 }
