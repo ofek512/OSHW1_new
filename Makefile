@@ -9,6 +9,8 @@ TESTS_INPUTS := $(wildcard test_input*.txt)
 TESTS_OUTPUTS := $(subst input,output,$(TESTS_INPUTS))
 SMASH_BIN := smash
 
+all: $(SMASH_BIN)
+
 test: $(TESTS_OUTPUTS)
 
 $(TESTS_OUTPUTS): $(SMASH_BIN)
