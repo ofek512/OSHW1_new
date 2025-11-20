@@ -197,6 +197,8 @@ public:
     explicit CdCommand(char *cmd_line);
 
     virtual ~CdCommand() = default;
+
+    void execute() override;
 }; // DONE
 
 class FGCommand : public BuiltInCommand {
@@ -217,11 +219,13 @@ public:
     void execute() override;
 };
 
-class JobsCommand : public BuiltInCommand{
+class JobsCommand : public BuiltInCommand {
 public:
     explicit JobsCommand(char *cmd_line);
-
     virtual  ~JobsCommand() = default;
+    void execute() override;
+};
+
 class AliasCommand : public BuiltInCommand {
 public:
     explicit AliasCommand(char *cmd_line);
@@ -236,6 +240,9 @@ public:
     explicit QuitCommand(char *cmd_line);
 
     virtual ~QuitCommand() = default;
+
+    void execute() override;
+};
 
 class UnaliasCommand : public BuiltInCommand {
 public:
@@ -259,32 +266,6 @@ public:
 };
 };
 
-class FGCommand : public BuiltInCommand {
-public:
-    explicit FGCommand(char *cmd_line);
-
-    virtual ~FGCommand() = default;
-
-    void execute() override;
-}; // DONE
-
-class KillCommand : public BuiltInCommand {
-public:
-    explicit KillCommand(char *cmd_line);
-
-    virtual ~KillCommand() = default;
-
-    void execute() override;
-};
-
-class AliasCommand : public BuiltInCommand {
-public:
-    explicit AliasCommand(char *cmd_line);
-
-    virtual ~AliasCommand() = default;
-
-    void execute() override;
-};
 
 class UnaliasCommand : public BuiltInCommand {
 public:
@@ -322,19 +303,6 @@ public:
     void execute() override;
 }; // DONE
 
-class ExternalCommand : public Command
-{
-public:
-    string full_cmd;
-
-    ExternalCommand(char *cmd_line);
-
-    virtual ~ExternalCommand(){}
-
-    string getCommandS() override;
-
-    void execute() override;
-}; // DONE
 class ComplexExternalCommand : public Command
 {
 public:
@@ -348,18 +316,6 @@ public:
     void execute() override;
 }; // DONE
 
-class ComplexExternalCommand : public Command
-{
-public:
-    char *bash_args[4];
-    ComplexExternalCommand(char *cmd_line);
-
-    virtual ~ComplexExternalCommand()
-    {
-    }
-
-    void execute() override;
-}; // DONE
 
 
 /////////////////////////////--------------Special commands-------//////////////////////////////
