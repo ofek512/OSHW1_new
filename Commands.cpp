@@ -76,7 +76,7 @@ bool _isBackgroundComamnd(const char *cmd_line)
     const string str(cmd_line);
     size_t last_char_idx = str.find_last_not_of(WHITESPACE);
 
-    Check if a non-whitespace character was found
+    //Check if a non-whitespace character was found
     if (last_char_idx == std::string::npos)
     {
         return false; // Empty or all-whitespace string
