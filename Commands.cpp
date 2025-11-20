@@ -1044,7 +1044,7 @@ void CdCommand::execute() {
 
     if(argsRes >= 3) {
         cout << "smash error: cd: too many arguments" << endl;
-    } else if (parsedArgs[1] == "-" || parsedArgs[1] == "..") {
+    } else if (parsedArgs[1] == "-") {
         if (!shell.getPrevWorkingDirectory() /* && parsedArgs[1] == "-" */){
             cout << "smash error: cd: OLDPWD not set" << endl;
         } else {
@@ -1053,6 +1053,10 @@ void CdCommand::execute() {
             if (!chdir(shell.getPrevWorkingDirectory())){
                 perror("smash error: chdir failed");
             }
+        }
+    } else if (parsedArgs[1] == ".."){
+        if(!chdir("..")) {
+            perror("smash error: chdir failed");
         }
     } else {
         if (!chdir(parsedArgs[1])) {
