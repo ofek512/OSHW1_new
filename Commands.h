@@ -2,7 +2,7 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 using namespace std;
-#include <vector>
+ #include <vector>
 #include <list>
 #include <unordered_map>
 #include <unordered_set>
@@ -74,6 +74,7 @@ public:
         ~JobEntry() = default;                                                                                                                                   // maybe delete cmd?
         bool operator<(const JobEntry &other) const;
     };
+
     list<JobEntry *> jobsList;
 
     std::unordered_map<int, JobEntry *> job_map; // I think we need to add it for more efficient search
@@ -140,6 +141,7 @@ public:
     char *getCurrWorkingDir() const;
     void setCurrWorkingDir(string newDir);
     string getPrevWorkingDir() const;
+    char *getPrevWorkingDirectory() const;
     void setPrevWorkingDir(string newDir);
     JobsList *getJobs();
     void getAllAlias(std::vector<std::string> &aliases);
@@ -179,6 +181,82 @@ public:
     virtual ~ChpromptCommand() = default;
 
     void execute() override;
+};
+
+class PwdCommand : public BuiltInCommand{
+public:
+    explicit PwdCommand(char *cmd_line);
+
+    virtual ~PwdCommand() = default;
+
+    void execute() override;
+};
+
+class CdCommand : public BuiltInCommand{
+public:
+    explicit CdCommand(char *cmd_line);
+
+    virtual ~CdCommand() = default;
+}; // DONE
+
+class FGCommand : public BuiltInCommand {
+public:
+    explicit FGCommand(char *cmd_line);
+
+    virtual ~FGCommand() = default;
+
+    void execute() override;
+}; // DONE
+
+class KillCommand : public BuiltInCommand {
+public:
+    explicit KillCommand(char *cmd_line);
+
+    virtual ~KillCommand() = default;
+
+    void execute() override;
+};
+
+class JobsCommand : public BuiltInCommand{
+public:
+    explicit JobsCommand(char *cmd_line);
+
+    virtual  ~JobsCommand() = default;
+class AliasCommand : public BuiltInCommand {
+public:
+    explicit AliasCommand(char *cmd_line);
+
+    virtual ~AliasCommand() = default;
+
+    void execute() override;
+};
+
+class QuitCommand : public BuiltInCommand{
+public:
+    explicit QuitCommand(char *cmd_line);
+
+    virtual ~QuitCommand() = default;
+
+class UnaliasCommand : public BuiltInCommand {
+public:
+    explicit UnaliasCommand(char *cmd_line);
+    virtual ~UnaliasCommand() = default;
+    void execute() override;
+};
+
+class UnsetenvCommand : public BuiltInCommand {
+public:
+    explicit UnsetenvCommand(char *cmd_line);
+    virtual ~UnsetenvCommand() = default;
+    void execute() override;
+};
+
+class SysinfoCommand : public BuiltInCommand {
+public:
+    explicit SysinfoCommand(char *cmd_line);
+    virtual ~SysinfoCommand() = default;
+    void execute() override;
+};
 };
 
 class FGCommand : public BuiltInCommand {
@@ -230,6 +308,19 @@ public:
 };
 
 //////////////////////////////--------------External commands-------/////////////////////////////
+class ExternalCommand : public Command
+{
+public:
+    string full_cmd;
+
+    ExternalCommand(char *cmd_line);
+
+    virtual ~ExternalCommand(){}
+
+    string getCommandS() override;
+
+    void execute() override;
+}; // DONE
 
 class ExternalCommand : public Command
 {
@@ -241,6 +332,18 @@ public:
     virtual ~ExternalCommand(){}
 
     string getCommandS() override;
+
+    void execute() override;
+}; // DONE
+class ComplexExternalCommand : public Command
+{
+public:
+    char *bash_args[4];
+    ComplexExternalCommand(char *cmd_line);
+
+    virtual ~ComplexExternalCommand()
+    {
+    }
 
     void execute() override;
 }; // DONE
