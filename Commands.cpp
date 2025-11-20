@@ -813,7 +813,7 @@ void KillCommand::execute() {
 
 AliasCommand::AliasCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void AliasCommand::execute() {
+void   AliasCommand::execute() {
     // if command only alias, print all aliases.
     if (cmd_segments.size() == 1) {
         vector<string> aliases;
