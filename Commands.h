@@ -142,7 +142,7 @@ public:
     void setCurrWorkingDir(string newDir);
     string getPrevWorkingDir() const;
     char *getPrevWorkingDirectory() const;
-    void setPrevWorkingDir(string newDir);
+    void setPrevWorkingDir(char* newDir);
     JobsList *getJobs();
     void getAllAlias(std::vector<std::string> &aliases);
     string getAlias(string name);

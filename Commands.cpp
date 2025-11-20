@@ -602,6 +602,11 @@ char* SmallShell::getPrevWorkingDirectory() const{
     return  prevWorkingDir;
 }
 
+void SmallShell::setPrevWorkingDir(char* newDir) {
+    prevWorkingDir = newDir;
+}
+
+
 /////////////////////////////--------------Built-in commands-------//////////////////////////////
 
 // Helper function to create segments vector from command line inorder to parse commands
@@ -1041,26 +1046,35 @@ void CdCommand::execute() {
     SmallShell &shell = SmallShell::getInstance();
     char *parsedArgs[COMMAND_MAX_ARGS] = {};
     int argsRes = _parseCommandLine(cmd_line, parsedArgs);
+    char* tempDir = shell.getPrevWorkingDirectory();
 
     if(argsRes >= 3) {
         cout << "smash error: cd: too many arguments" << endl;
     } else if (parsedArgs[1] == "-") {
-        if (!shell.getPrevWorkingDirectory() /* && parsedArgs[1] == "-" */){
+        if (!shell.getPrevWorkingDirectory()){
             cout << "smash error: cd: OLDPWD not set" << endl;
         } else {
             //redirecting to the pwd and updating
-            shell.setPrevWorkingDir(shell.getCurrWorkingDir());
+            char buff[BUF_SIZE];
+            shell.setPrevWorkingDir(getcwd(buff, BUF_SIZE)/*shell.getCurrWorkingDir()*/);
             if (!chdir(shell.getPrevWorkingDirectory())){
                 perror("smash error: chdir failed");
+                shell.setPrevWorkingDir(tempDir);
             }
         }
     } else if (parsedArgs[1] == ".."){
+        char buff[BUF_SIZE];
+        shell.setPrevWorkingDir(getcwd(buff, BUF_SIZE));
         if(!chdir("..")) {
             perror("smash error: chdir failed");
+            shell.setPrevWorkingDir(tempDir);
         }
     } else {
+        char buff[BUF_SIZE];
+        shell.setPrevWorkingDir(getcwd(buff, BUF_SIZE));
         if (!chdir(parsedArgs[1])) {
             perror("smash error: chdir failed");
+            shell.setPrevWorkingDir(tempDir);
         }
     }
 }
