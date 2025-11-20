@@ -2,7 +2,7 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 using namespace std;
-#include <vector>
+ #include <vector>
 #include <list>
 #include <unordered_map>
 #include <unordered_set>
@@ -141,6 +141,7 @@ public:
     char *getCurrWorkingDir() const;
     void setCurrWorkingDir(string newDir);
     string getPrevWorkingDir() const;
+    char *getPrevWorkingDirectory() const;
     void setPrevWorkingDir(string newDir);
     JobsList *getJobs();
     void getAllAlias(std::vector<std::string> &aliases);
@@ -180,6 +181,22 @@ public:
     virtual ~ChpromptCommand() = default;
 
     void execute() override;
+};
+
+class PwdCommand : public BuiltInCommand{
+public:
+    explicit PwdCommand(char *cmd_line);
+
+    virtual ~PwdCommand() = default;
+
+    void execute() override;
+};
+
+class CdCommand : public BuiltInCommand{
+public:
+    explicit CdCommand(char *cmd_line);
+
+    virtual ~CdCommand() = default;
 }; // DONE
 
 class FGCommand : public BuiltInCommand {
@@ -200,6 +217,11 @@ public:
     void execute() override;
 };
 
+class JobsCommand : public BuiltInCommand{
+public:
+    explicit JobsCommand(char *cmd_line);
+
+    virtual  ~JobsCommand() = default;
 class AliasCommand : public BuiltInCommand {
 public:
     explicit AliasCommand(char *cmd_line);
@@ -208,6 +230,12 @@ public:
 
     void execute() override;
 };
+
+class QuitCommand : public BuiltInCommand{
+public:
+    explicit QuitCommand(char *cmd_line);
+
+    virtual ~QuitCommand() = default;
 
 class UnaliasCommand : public BuiltInCommand {
 public:

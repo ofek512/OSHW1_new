@@ -266,11 +266,18 @@ Command *SmallShell::CreateCommand(char *cmd_line)
     }
 
 
-    if (firstWord == "showpid")
-    {
+    if (firstWord == "showpid"){
         return new ShowPidCommand(cmd_line);
     } else if (firstWord == "chprompt") {
         return new ChpromptCommand(cmd_line);
+    } else if (firstWord == "pwd") {
+        return new PwdCommand(cmd_line);
+    } else if (firstWord == "cd") {
+        return new CdCommand(cmd_line);
+    } else if (firstWord == "jobs") {
+        return new JobsCommand(cmd_line);
+    } else if (firstWord == "quit") {
+        return new QuitCommand(cmd_line);
     } else if (firstWord == "fg") {
         return new FGCommand(cmd_line);
     } else if (firstWord == "kill") {
@@ -313,8 +320,7 @@ void SmallShell::executeCommand(char *cmd_line)
         // Get any arguments that followed the alias
         string args = "";
         size_t spacePos = cmd_s.find_first_of(" \n");
-        if (spacePos != string::npos)
-        {
+        if (spacePos != string::npos){
             args = cmd_s.substr(spacePos);
         }
 
@@ -592,6 +598,10 @@ bool SmallShell::removeAlias(string name)
     return true;
 }
 
+char* SmallShell::getPrevWorkingDirectory() const{
+    return  prevWorkingDir;
+}
+
 /////////////////////////////--------------Built-in commands-------//////////////////////////////
 
 // Helper function to create segments vector from command line inorder to parse commands
@@ -629,7 +639,7 @@ void ShowPidCommand::execute()
     return;
 }
 
-ChpromptCommand::ChpromptCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
+ChpromptCommand::ChpromptCommand(char *cmd_line) : BuiltInCommand(cmd_line){}
 
 void ChpromptCommand::execute(){
     SmallShell &shell = SmallShell::getInstance();
@@ -643,6 +653,20 @@ void ChpromptCommand::execute(){
     return;
 }
 
+PwdCommand::PwdCommand(char *cmd_line) : BuiltInCommand(cmd_line){}
+
+void PwdCommand::execute() {
+    SmallShell &shell = SmallShell::getInstance();
+    char buff[BUF_SIZE];
+    if (getcwd(buff, BUF_SIZE)) {
+        cout << buff << endl;
+    } else {
+        //what to do in this case?
+      return;
+    }
+}
+
+CdCommand::CdCommand(char *cmd_line) : BuiltInCommand(cmd_line){}
 FGCommand::FGCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void FGCommand::execute() {
@@ -1013,6 +1037,63 @@ void SysinfoCommand::execute()
     cout << "Boot Time: " << time_str << endl;
 }
 
+void CdCommand::execute() {
+    SmallShell &shell = SmallShell::getInstance();
+    char *parsedArgs[COMMAND_MAX_ARGS] = {};
+    int argsRes = _parseCommandLine(cmd_line, parsedArgs);
+
+    if(argsRes >= 3) {
+        cout << "smash error: cd: too many arguments" << endl;
+    } else if (parsedArgs[1] == "-" || parsedArgs[1] == "..") {
+        if (!shell.getPrevWorkingDirectory() /* && parsedArgs[1] == "-" */){
+            cout << "smash error: cd: OLDPWD not set" << endl;
+        } else {
+            //redirecting to the pwd and updating
+            shell.setPrevWorkingDir(shell.getCurrWorkingDir());
+            if (!chdir(shell.getPrevWorkingDirectory())){
+                perror("smash error: chdir failed");
+            }
+        }
+    } else {
+        if (!chdir(parsedArgs[1])) {
+            perror("smash error: chdir failed");
+        }
+    }
+}
+
+JobsCommand::JobsCommand(char *cmd_line) : BuiltInCommand(cmd_line){}
+
+void JobsCommand::execute() {
+    SmallShell &shell = SmallShell::getInstance();
+    shell.getJobs()->removeFinishedJobs();
+
+    shell.getJobs()->jobsList.sort();
+    for(JobsList::JobEntry* job : shell.getJobs()->jobsList) {
+        cout << "[" << job->jobId << "] " << job->command << endl;
+    }
+}
+
+QuitCommand::QuitCommand(char *cmd_line)  : BuiltInCommand(cmd_line){}
+
+void QuitCommand::execute() {
+    SmallShell &shell = SmallShell::getInstance();
+    char *parsedArgs[COMMAND_MAX_ARGS] = {};
+    _parseCommandLine(cmd_line, parsedArgs);
+
+    shell.getJobs()->removeFinishedJobs();
+
+    if (parsedArgs[1] != "kill") {
+        exit(0);
+    } else {
+        int totJobsKilled = shell.getJobs()->jobsList.size();
+        cout << "smash: sending SIGKILL signal to " << totJobsKilled << " jobs:" << endl;
+
+        for (JobsList::JobEntry *job: shell.getJobs()->jobsList) {
+            cout << job->pid << ": " << job->command << endl;
+        }
+        exit(0);
+    }
+}
 /////////////////////////////--------------External commands-------//////////////////////////////
 
 ExternalCommand::ExternalCommand(char *cmd_line) : Command(cmd_line)
