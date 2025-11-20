@@ -264,29 +264,7 @@ public:
     virtual ~SysinfoCommand() = default;
     void execute() override;
 };
-};
 
-
-class UnaliasCommand : public BuiltInCommand {
-public:
-    explicit UnaliasCommand(char *cmd_line);
-    virtual ~UnaliasCommand() = default;
-    void execute() override;
-};
-
-class UnsetenvCommand : public BuiltInCommand {
-public:
-    explicit UnsetenvCommand(char *cmd_line);
-    virtual ~UnsetenvCommand() = default;
-    void execute() override;
-};
-
-class SysinfoCommand : public BuiltInCommand {
-public:
-    explicit SysinfoCommand(char *cmd_line);
-    virtual ~SysinfoCommand() = default;
-    void execute() override;
-};
 
 //////////////////////////////--------------External commands-------/////////////////////////////
 class ExternalCommand : public Command
