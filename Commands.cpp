@@ -202,7 +202,7 @@ string SmallShell::getPrompt() const
 
 // JobsList SmallShell::jobList;
 
-SmallShell::SmallShell() : aliasMap(), aliasCreationOrder(), prompt("smash"), current_process(-1), prevWorkingDir(nullptr),
+SmallShell::SmallShell() : aliasMap(), aliasCreationOrder(), prompt("smash"), current_process(-1), prevWorkingDir("" /*nullptr*/),
                            jobList(new JobsList()), commands(), pid(getpid())
 {
     createCommandVector();
@@ -219,8 +219,8 @@ SmallShell::SmallShell() : aliasMap(), aliasCreationOrder(), prompt("smash"), cu
 
 SmallShell::~SmallShell()
 {
-    if (prevWorkingDir)
-        free(prevWorkingDir);
+    //if (prevWorkingDir)
+      //  free(prevWorkingDir);
     // should we do smth else?
     delete jobList;
 }
@@ -598,11 +598,11 @@ bool SmallShell::removeAlias(string name)
     return true;
 }
 
-char* SmallShell::getPrevWorkingDirectory() const{
+string SmallShell::getPrevWorkingDir() const{
     return  prevWorkingDir;
 }
 
-void SmallShell::setPrevWorkingDir(char* newDir) {
+void SmallShell::setPrevWorkingDir(const std::string& newDir) {
     prevWorkingDir = newDir;
 }
 
@@ -1046,35 +1046,40 @@ void CdCommand::execute() {
     SmallShell &shell = SmallShell::getInstance();
     char *parsedArgs[COMMAND_MAX_ARGS] = {};
     int argsRes = _parseCommandLine(cmd_line, parsedArgs);
-    char* tempDir = shell.getPrevWorkingDirectory();
+    //string tempDir = shell.getPrevWorkingDir();
 
     if(argsRes >= 3) {
         cout << "smash error: cd: too many arguments" << endl;
-    } else if (parsedArgs[1] == "-") {
-        if (!shell.getPrevWorkingDirectory()){
+    } else if (parsedArgs[1] && strcmp(parsedArgs[1], "-") == 0) {
+        //string tempDir = (shell.getPrevWorkingDir().c_str() == nullptr) ? "" : shell.getPrevWorkingDir();
+        string tempDir = shell.getPrevWorkingDir();
+        if (tempDir.empty()){
             cout << "smash error: cd: OLDPWD not set" << endl;
         } else {
             //redirecting to the pwd and updating
             char buff[BUF_SIZE];
-            shell.setPrevWorkingDir(getcwd(buff, BUF_SIZE)/*shell.getCurrWorkingDir()*/);
-            if (!chdir(shell.getPrevWorkingDirectory())){
+            string current = getcwd(buff, BUF_SIZE);
+            if (chdir(tempDir.c_str()) != 0){
                 perror("smash error: chdir failed");
-                shell.setPrevWorkingDir(tempDir);
+            } else {
+                shell.setPrevWorkingDir(current);
             }
         }
-    } else if (parsedArgs[1] == ".."){
+    } else if (parsedArgs[1] && strcmp(parsedArgs[1], "..") == 0){
         char buff[BUF_SIZE];
-        shell.setPrevWorkingDir(getcwd(buff, BUF_SIZE));
-        if(!chdir("..")) {
+        string current = getcwd(buff, BUF_SIZE);
+        if(chdir("..") != 0) {
             perror("smash error: chdir failed");
-            shell.setPrevWorkingDir(tempDir);
+        } else {
+            shell.setPrevWorkingDir(current);
         }
     } else {
         char buff[BUF_SIZE];
-        shell.setPrevWorkingDir(getcwd(buff, BUF_SIZE));
-        if (!chdir(parsedArgs[1])) {
+        string current = getcwd(buff, BUF_SIZE);
+        if (chdir(parsedArgs[1]) != 0) {
             perror("smash error: chdir failed");
-            shell.setPrevWorkingDir(tempDir);
+        } else {
+            shell.setPrevWorkingDir(current);
         }
     }
 }

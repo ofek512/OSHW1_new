@@ -112,7 +112,8 @@ private:
     map<string, string> aliasMap;
     vector<string> aliasCreationOrder;
     string prompt;
-    char *prevWorkingDir;
+    //char *prevWorkingDir;
+    string prevWorkingDir;
     JobsList *jobList;
     vector<string> commands;
     SmallShell();
@@ -138,11 +139,8 @@ public:
     // TODO: add extra methods as needed
     void setPrompt(string newPrompt);
     string getPrompt() const;
-    char *getCurrWorkingDir() const;
-    void setCurrWorkingDir(string newDir);
     string getPrevWorkingDir() const;
-    char *getPrevWorkingDirectory() const;
-    void setPrevWorkingDir(char* newDir);
+    void setPrevWorkingDir(const std::string& newDir);
     JobsList *getJobs();
     void getAllAlias(std::vector<std::string> &aliases);
     string getAlias(string name);
