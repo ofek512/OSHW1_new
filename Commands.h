@@ -263,7 +263,35 @@ public:
     void execute() override;
 };
 
+class UsbInfoCommand : public Command
+{
+private:
+    // Helper struct to store data for sorting
+    struct UsbDevice
+    {
+        int devnum;
+        string id;
+        string manufacturer;
+        string product;
+        string max_power;
 
+        // Comparison operator for sorting by device number
+        bool operator<(const UsbDevice &other) const
+        {
+            return devnum < other.devnum;
+        }
+    };
+
+    // Helper function to read a file from /sys
+    // NOTE: This assumes you have the _trim function available,
+    // which is defined at the top of your Commands.cpp
+    string read_sys_file(const string &path);
+
+public:
+    UsbInfoCommand(char *cmd_line);
+    virtual ~UsbInfoCommand() {}
+    void execute() override;
+};
 //////////////////////////////--------------External commands-------/////////////////////////////
 class ExternalCommand : public Command
 {

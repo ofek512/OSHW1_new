@@ -294,6 +294,8 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         return new WhoAmICommand(cmd_line);
     } else if (firstWord == "du") {
         return new DiskUsageCommand(cmd_line);
+    } else if (firstWord == "usbinfo") {
+        return new UsbInfoCommand(cmd_line);
     }
 
     // if nothing else is matched, we treat as external command.
@@ -1706,4 +1708,115 @@ void DiskUsageCommand::execute()
 
     // Standard du format: just the size followed by the path
     cout << "Total disk usage: " << kb_size << " KB" << std::endl;
+}
+
+UsbInfoCommand::UsbInfoCommand(char *cmd_line) : Command(cmd_line)
+{
+    // This uses the createSegments from the parent Command class
+    createSegments(cmd_line, cmd_segments);
+}
+
+string UsbInfoCommand::read_sys_file(const string &path){
+    int fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0)
+        return "N/A";
+
+    char buf[256];
+    ssize_t n = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+
+    if (n <= 0)
+        return "N/A";
+
+    buf[n] = '\0';
+    return _trim(string(buf)); // Using your existing _trim function
+}
+void UsbInfoCommand::execute()
+{
+    vector<UsbDevice> devices;
+    const char *base_path = "/sys/bus/usb/devices";
+
+    int dir_fd = open(base_path, O_RDONLY | O_DIRECTORY);
+    if (dir_fd < 0)
+    {
+        perror("smash error: open failed");
+        return;
+    }
+
+    char buf[BUF_SIZE];
+    long bytes_read;
+
+    // Use getdents64 to read directory entries
+    while ((bytes_read = syscall(SYS_getdents64, dir_fd, buf, BUF_SIZE)) > 0)
+    {
+        for (long bpos = 0; bpos < bytes_read;)
+        {
+            struct linux_dirent64 *d = (struct linux_dirent64 *)(buf + bpos);
+            bpos += d->d_reclen; // Move to next entry
+
+            // Skip . and ..
+            if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
+            {
+                continue;
+            }
+
+            // Check if this entry is a real device by checking for 'devnum'
+            string dev_path = string(base_path) + "/" + d->d_name;
+            string devnum_path = dev_path + "/devnum";
+
+            string devnum_str = read_sys_file(devnum_path); // Using helper from .h file
+
+            if (devnum_str == "N/A")
+            {
+                // This isn't a device directory (e.g., it's "usb1", not "1-1")
+                continue;
+            }
+
+            // This is a real device, collect its info
+            UsbDevice dev;
+            try
+            {
+                dev.devnum = stoi(devnum_str);
+            }
+            catch (...)
+            {
+                continue; // Skip if devnum isn't a number
+            }
+
+            string vendor = read_sys_file(dev_path + "/idVendor");
+            string product_id = read_sys_file(dev_path + "/idProduct");
+
+            dev.id = vendor + ":" + product_id;
+            dev.manufacturer = read_sys_file(dev_path + "/manufacturer");
+            dev.product = read_sys_file(dev_path + "/product");
+            dev.max_power = read_sys_file(dev_path + "/bMaxPower");
+
+            devices.push_back(dev);
+        }
+    }
+    close(dir_fd);
+
+    if (bytes_read < 0)
+    {
+        perror("smash error: getdents64 failed");
+        return;
+    }
+
+    // Check if any devices were found
+    if (devices.empty())
+    {
+        cerr << "smash error: usbinfo: no USB devices found" << endl;
+        return;
+    }
+
+    // Sort devices by device number
+    std::sort(devices.begin(), devices.end());
+
+    // Print all devices in the correct format
+    for (const auto &dev : devices)
+    {
+        cout << "Device " << dev.devnum << ": ID " << dev.id << " "
+             << dev.manufacturer << " " << dev.product
+             << " MaxPower: " << dev.max_power << endl;
+    }
 }
