@@ -776,6 +776,7 @@ void KillCommand::execute() {
     int num_of_args = _parseCommandLine(cmd_line, args);
     if (num_of_args != 3) {
         cerr << "smash error: kill: invalid arguments" << endl;
+        return;
     }
     int signum = 0;
     int jobId = 0;
@@ -1105,7 +1106,9 @@ void QuitCommand::execute() {
 
     shell.getJobs()->removeFinishedJobs();
 
-    if (parsedArgs[1] != "kill") {
+    cout << parsedArgs[1] << endl;
+    if (strcmp(parsedArgs[1], "kill") != 0) {
+        cout << "sara" << endl;
         exit(0);
     } else {
         int totJobsKilled = shell.getJobs()->jobsList.size();
