@@ -76,7 +76,7 @@ bool _isBackgroundComamnd(const char *cmd_line)
     const string str(cmd_line);
     size_t last_char_idx = str.find_last_not_of(WHITESPACE);
 
-    //Check if a non-whitespace character was found
+    // Check if a non-whitespace character was found
     if (last_char_idx == std::string::npos)
     {
         return false; // Empty or all-whitespace string
@@ -114,7 +114,7 @@ void _removeBackgroundSign(char *cmd_line)
     if (end_of_cmd == std::string::npos)
     {
         // The command was just "&" or "& "
-        cmd_line[0] = 0; 
+        cmd_line[0] = 0;
     }
     else
     {
@@ -165,7 +165,6 @@ bool extract_signal_number(char *input, int &signum)
 
     return true;
 }
-
 
 string Command::getCommandS()
 {
@@ -219,8 +218,8 @@ SmallShell::SmallShell() : aliasMap(), aliasCreationOrder(), prompt("smash"), cu
 
 SmallShell::~SmallShell()
 {
-    //if (prevWorkingDir)
-      //  free(prevWorkingDir);
+    // if (prevWorkingDir)
+    //   free(prevWorkingDir);
     // should we do smth else?
     delete jobList;
 }
@@ -265,36 +264,64 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         firstWord.pop_back();
     }
 
-
-    if (firstWord == "showpid"){
+    if (firstWord == "showpid")
+    {
         return new ShowPidCommand(cmd_line);
-    } else if (firstWord == "chprompt") {
+    }
+    else if (firstWord == "chprompt")
+    {
         return new ChpromptCommand(cmd_line);
-    } else if (firstWord == "pwd") {
+    }
+    else if (firstWord == "pwd")
+    {
         return new PwdCommand(cmd_line);
-    } else if (firstWord == "cd") {
+    }
+    else if (firstWord == "cd")
+    {
         return new CdCommand(cmd_line);
-    } else if (firstWord == "jobs") {
+    }
+    else if (firstWord == "jobs")
+    {
         return new JobsCommand(cmd_line);
-    } else if (firstWord == "quit") {
+    }
+    else if (firstWord == "quit")
+    {
         return new QuitCommand(cmd_line);
-    } else if (firstWord == "fg") {
+    }
+    else if (firstWord == "fg")
+    {
         return new FGCommand(cmd_line);
-    } else if (firstWord == "kill") {
+    }
+    else if (firstWord == "kill")
+    {
         return new KillCommand(cmd_line);
-    } else if (firstWord == "alias") {
+    }
+    else if (firstWord == "alias")
+    {
         return new AliasCommand(cmd_line);
-    } else if (firstWord == "unalias") {
+    }
+    else if (firstWord == "unalias")
+    {
         return new UnaliasCommand(cmd_line);
-    } else if (firstWord == "unsetenv") {
+    }
+    else if (firstWord == "unsetenv")
+    {
         return new UnsetenvCommand(cmd_line);
-    } else if (firstWord == "sysinfo") {
+    }
+    else if (firstWord == "sysinfo")
+    {
         return new SysinfoCommand(cmd_line);
-    } else if (firstWord == "whoami") {
+    }
+    else if (firstWord == "whoami")
+    {
         return new WhoAmICommand(cmd_line);
-    } else if (firstWord == "du") {
+    }
+    else if (firstWord == "du")
+    {
         return new DiskUsageCommand(cmd_line);
-    } else if (firstWord == "usbinfo") {
+    }
+    else if (firstWord == "usbinfo")
+    {
         return new UsbInfoCommand(cmd_line);
     }
 
@@ -313,17 +340,33 @@ void SmallShell::executeCommand(char *cmd_line)
     string cmd_s = _trim(std::string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
+    // Strip '&' from firstWord if present (for alias matching)
+    if (!firstWord.empty() && firstWord.back() == '&')
+    {
+        firstWord.pop_back();
+    }
+
     // Check if the command name is an alias
     if (!aliasMap.empty() && aliasMap.find(firstWord) != aliasMap.end())
     {
         // Get the command that the alias maps to
         std::string aliasCommand = aliasMap[firstWord];
 
-        // Get any arguments that followed the alias
+        // Get any arguments that followed the alias (including & if present)
         string args = "";
         size_t spacePos = cmd_s.find_first_of(" \n");
-        if (spacePos != string::npos){
+        if (spacePos != string::npos)
+        {
             args = cmd_s.substr(spacePos);
+        }
+        else
+        {
+            // No space found, check if original command ended with &
+            // (e.g., "sara&" with no arguments)
+            if (!cmd_s.empty() && cmd_s.back() == '&')
+            {
+                args = "&";
+            }
         }
 
         // Create the new command by substituting the alias
@@ -600,14 +643,15 @@ bool SmallShell::removeAlias(string name)
     return true;
 }
 
-string SmallShell::getPrevWorkingDir() const{
-    return  prevWorkingDir;
+string SmallShell::getPrevWorkingDir() const
+{
+    return prevWorkingDir;
 }
 
-void SmallShell::setPrevWorkingDir(const std::string& newDir) {
+void SmallShell::setPrevWorkingDir(const std::string &newDir)
+{
     prevWorkingDir = newDir;
 }
-
 
 /////////////////////////////--------------Built-in commands-------//////////////////////////////
 
@@ -646,67 +690,83 @@ void ShowPidCommand::execute()
     return;
 }
 
-ChpromptCommand::ChpromptCommand(char *cmd_line) : BuiltInCommand(cmd_line){}
+ChpromptCommand::ChpromptCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void ChpromptCommand::execute(){
+void ChpromptCommand::execute()
+{
     SmallShell &shell = SmallShell::getInstance();
     char *parsedArgs[COMMAND_MAX_ARGS] = {};
     int argsRes = _parseCommandLine(cmd_line, parsedArgs);
-    if(argsRes == 1){
+    if (argsRes == 1)
+    {
         shell.setPrompt("smash");
-    } else {
+    }
+    else
+    {
         shell.setPrompt(parsedArgs[1]);
     }
     return;
 }
 
-PwdCommand::PwdCommand(char *cmd_line) : BuiltInCommand(cmd_line){}
+PwdCommand::PwdCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void PwdCommand::execute() {
+void PwdCommand::execute()
+{
     SmallShell &shell = SmallShell::getInstance();
     char buff[BUF_SIZE];
-    if (getcwd(buff, BUF_SIZE)) {
+    if (getcwd(buff, BUF_SIZE))
+    {
         cout << buff << endl;
-    } else {
-        //what to do in this case?
-      return;
+    }
+    else
+    {
+        // what to do in this case?
+        return;
     }
 }
 
-CdCommand::CdCommand(char *cmd_line) : BuiltInCommand(cmd_line){}
+CdCommand::CdCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 FGCommand::FGCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void FGCommand::execute() {
+void FGCommand::execute()
+{
     SmallShell &shell = SmallShell::getInstance();
-    JobsList* jobs = shell.getJobs();
+    JobsList *jobs = shell.getJobs();
 
     // remove all jobs that finished.
     jobs->removeFinishedJobs();
 
     // first we need to extract second word in cmd_line to see if its a number.
     char **args = init_args();
-    if (!args) {
+    if (!args)
+    {
         cerr << "smash error: malloc failed" << endl;
         return;
     }
     int num_of_args = _parseCommandLine(cmd_line, args);
-    if (num_of_args > 2) {
+    if (num_of_args > 2)
+    {
         cerr << "smash error: fg: invalid arguments" << endl;
         return;
     }
     // If there are no arguments, we bring the job with max id to the foreground.
-    else if (num_of_args == 1) {
-        if (jobs->max_id == -1) {
+    else if (num_of_args == 1)
+    {
+        if (jobs->max_id == -1)
+        {
             cerr << "smash error: fg: jobs list is empty" << endl;
             return;
         }
-        JobsList::JobEntry* job = jobs->getJobById(jobs->max_id);
-        if (!job) {
+        JobsList::JobEntry *job = jobs->getJobById(jobs->max_id);
+        if (!job)
+        {
             cerr << "smash error: fg: jobs list is empty" << endl;
         }
         // check if job is stopped
-        if (job->isStopped) {
-            if (kill(job->pid, SIGCONT) < 0) {
+        if (job->isStopped)
+        {
+            if (kill(job->pid, SIGCONT) < 0)
+            {
                 cerr << "smash error: kill failed" << endl;
                 free_args(args, num_of_args);
                 return;
@@ -718,7 +778,8 @@ void FGCommand::execute() {
 
         // wait for the process to finish
         int status;
-        if (waitpid(job->pid, &status, 0) == -1) {
+        if (waitpid(job->pid, &status, 0) == -1)
+        {
             cerr << "smash error: waitpid failed" << endl;
             free_args(args, num_of_args);
             shell.current_process = -1;
@@ -727,24 +788,29 @@ void FGCommand::execute() {
         shell.current_process = -1;
     }
     // got two arguments, need to find job with id argument.
-    else {
+    else
+    {
         // check if second argument is a legit number
         string secondArg = string(args[1]);
-        if (!is_legit_num(secondArg)) {
+        if (!is_legit_num(secondArg))
+        {
             cerr << "smash error: fg: invalid arguments" << endl;
             free_args(args, num_of_args);
             return;
         }
         int jobId = stoi(secondArg);
-        JobsList::JobEntry* job = jobs->getJobById(jobId);
-        if (!job) {
+        JobsList::JobEntry *job = jobs->getJobById(jobId);
+        if (!job)
+        {
             cerr << "smash error: fg: job-id " << jobId << " does not exist" << endl;
             free_args(args, num_of_args);
             return;
         }
         // check if job is stopped
-        if (job->isStopped) {
-            if (kill(job->pid, SIGCONT) < 0) {
+        if (job->isStopped)
+        {
+            if (kill(job->pid, SIGCONT) < 0)
+            {
                 cerr << "smash error: kill failed" << endl;
                 free_args(args, num_of_args);
                 return;
@@ -755,7 +821,8 @@ void FGCommand::execute() {
         shell.current_process = job->pid;
         // wait for the process to finish
         int status;
-        if (waitpid(job->pid, &status, 0) == -1) {
+        if (waitpid(job->pid, &status, 0) == -1)
+        {
             cerr << "smash error: waitpid failed" << endl;
             free_args(args, num_of_args);
             shell.current_process = -1;
@@ -768,15 +835,18 @@ void FGCommand::execute() {
 
 KillCommand::KillCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void KillCommand::execute() {
+void KillCommand::execute()
+{
     char **args = init_args();
     SmallShell &shell = SmallShell::getInstance();
-    if (!args) {
+    if (!args)
+    {
         cerr << "smash error: malloc failed" << endl;
         return;
     }
     int num_of_args = _parseCommandLine(cmd_line, args);
-    if (num_of_args != 3) {
+    if (num_of_args != 3)
+    {
         cerr << "smash error: kill: invalid arguments" << endl;
         return;
     }
@@ -784,36 +854,43 @@ void KillCommand::execute() {
     int jobId = 0;
 
     // check if jobId number is valid
-    if (!is_legit_num(string(args[2]))) {
+    if (!is_legit_num(string(args[2])))
+    {
         cerr << "smash error: kill: invalid arguments" << endl;
         free_args(args, num_of_args);
         return;
     }
     jobId = stoi(string(args[2]));
 
-    //check if signal number is valid
-    if (!extract_signal_number(args[1], signum)) {
+    // check if signal number is valid
+    if (!extract_signal_number(args[1], signum))
+    {
         cerr << "smash error: kill: invalid arguments" << endl;
         free_args(args, num_of_args);
         return;
     }
 
-    JobsList::JobEntry* job = shell.getJobs()->getJobById(jobId);
-    if (!job) {
+    JobsList::JobEntry *job = shell.getJobs()->getJobById(jobId);
+    if (!job)
+    {
         cerr << "smash error: kill: job-id " << jobId << " does not exist" << endl;
         free_args(args, num_of_args);
         return;
     }
-    if (kill(job->pid, signum) < 0) {
+    if (kill(job->pid, signum) < 0)
+    {
         cerr << "smash error: kill failed" << endl;
         free_args(args, num_of_args);
         return;
     }
 
     cout << "signal " << signum << " was sent to pid " << job->pid << endl;
-    if (signum == SIGSTOP) {
+    if (signum == SIGSTOP)
+    {
         job->isStopped = true;
-    } else if (signum == SIGCONT) {
+    }
+    else if (signum == SIGCONT)
+    {
         job->isStopped = false;
     }
     free_args(args, num_of_args);
@@ -821,12 +898,15 @@ void KillCommand::execute() {
 
 AliasCommand::AliasCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void AliasCommand::execute() {
+void AliasCommand::execute()
+{
     // if command only alias, print all aliases.
-    if (cmd_segments.size() == 1) {
+    if (cmd_segments.size() == 1)
+    {
         vector<string> aliases;
         SmallShell::getInstance().getAllAlias(aliases);
-        for (const string &alias : aliases) {
+        for (const string &alias : aliases)
+        {
             cout << alias << endl;
         }
         return;
@@ -853,14 +933,14 @@ void AliasCommand::execute() {
     string aliasName = matches[1];
     string aliasCommand = matches[2];
 
-    //check if alias is reserved command.
+    // check if alias is reserved command.
     if (SmallShell::getInstance().validCommand(aliasName))
     {
         cerr << "smash error: alias: " << aliasName << " already exists or is a reserved command" << std::endl;
         return;
     }
 
-    //check if alias already exists
+    // check if alias already exists
     if (SmallShell::getInstance().getAlias(aliasName).compare("") != 0)
     {
         cerr << "smash error: alias: " << aliasName << " already exists or is a reserved command" << std::endl;
@@ -872,24 +952,28 @@ void AliasCommand::execute() {
 
 UnaliasCommand::UnaliasCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void UnaliasCommand::execute() {
+void UnaliasCommand::execute()
+{
     char **args = init_args();
-    if (!args) {
+    if (!args)
+    {
         cerr << "smash error: malloc failed" << endl;
         return;
     }
     int num_of_args = _parseCommandLine(cmd_line, args);
-    if (num_of_args == 1) {
+    if (num_of_args == 1)
+    {
         cerr << "smash error: unalias: not enough arguments" << endl;
         free_args(args, num_of_args);
         return;
     }
 
     // try to remove aliases until the first not valid alias.
-    for (int i = 1; i < num_of_args; i++) {
+    for (int i = 1; i < num_of_args; i++)
+    {
         string current_alias(args[i]);
 
-        //check if alias even exists
+        // check if alias even exists
         if (!SmallShell::getInstance().removeAlias(current_alias))
         {
             cerr << "smash error: unalias: " << current_alias << " alias does not exist" << endl;
@@ -902,7 +986,8 @@ void UnaliasCommand::execute() {
 
 UnsetenvCommand::UnsetenvCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void UnsetenvCommand::execute() {
+void UnsetenvCommand::execute()
+{
     // If no variable names were provided then error
     if (cmd_segments.size() < 2)
     {
@@ -1045,63 +1130,86 @@ void SysinfoCommand::execute()
     cout << "Boot Time: " << time_str << endl;
 }
 
-void CdCommand::execute() {
+void CdCommand::execute()
+{
     SmallShell &shell = SmallShell::getInstance();
     char *parsedArgs[COMMAND_MAX_ARGS] = {};
     int argsRes = _parseCommandLine(cmd_line, parsedArgs);
-    //string tempDir = shell.getPrevWorkingDir();
+    // string tempDir = shell.getPrevWorkingDir();
 
-    if(argsRes >= 3) {
+    if (argsRes >= 3)
+    {
         cout << "smash error: cd: too many arguments" << endl;
-    } else if (parsedArgs[1] && strcmp(parsedArgs[1], "-") == 0) {
-        //string tempDir = (shell.getPrevWorkingDir().c_str() == nullptr) ? "" : shell.getPrevWorkingDir();
+    }
+    else if (parsedArgs[1] && strcmp(parsedArgs[1], "-") == 0)
+    {
+        // string tempDir = (shell.getPrevWorkingDir().c_str() == nullptr) ? "" : shell.getPrevWorkingDir();
         string tempDir = shell.getPrevWorkingDir();
-        if (tempDir.empty()){
+        if (tempDir.empty())
+        {
             cout << "smash error: cd: OLDPWD not set" << endl;
-        } else {
-            //redirecting to the pwd and updating
+        }
+        else
+        {
+            // redirecting to the pwd and updating
             char buff[BUF_SIZE];
             string current = getcwd(buff, BUF_SIZE);
-            if (chdir(tempDir.c_str()) != 0){
+            if (chdir(tempDir.c_str()) != 0)
+            {
                 perror("smash error: chdir failed");
-            } else {
+            }
+            else
+            {
                 shell.setPrevWorkingDir(current);
             }
         }
-    } else if (parsedArgs[1] && strcmp(parsedArgs[1], "..") == 0){
+    }
+    else if (parsedArgs[1] && strcmp(parsedArgs[1], "..") == 0)
+    {
         char buff[BUF_SIZE];
         string current = getcwd(buff, BUF_SIZE);
-        if(chdir("..") != 0) {
+        if (chdir("..") != 0)
+        {
             perror("smash error: chdir failed");
-        } else {
+        }
+        else
+        {
             shell.setPrevWorkingDir(current);
         }
-    } else {
+    }
+    else
+    {
         char buff[BUF_SIZE];
         string current = getcwd(buff, BUF_SIZE);
-        if (chdir(parsedArgs[1]) != 0) {
+        if (chdir(parsedArgs[1]) != 0)
+        {
             perror("smash error: chdir failed");
-        } else {
+        }
+        else
+        {
             shell.setPrevWorkingDir(current);
         }
     }
 }
 
-JobsCommand::JobsCommand(char *cmd_line) : BuiltInCommand(cmd_line){}
+JobsCommand::JobsCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void JobsCommand::execute() {
+void JobsCommand::execute()
+{
     SmallShell &shell = SmallShell::getInstance();
     shell.getJobs()->removeFinishedJobs();
 
     shell.getJobs()->jobsList.sort();
-    for(JobsList::JobEntry* job : shell.getJobs()->jobsList) {
+    for (JobsList::JobEntry *job : shell.getJobs()->jobsList)
+    {
         cout << "[" << job->jobId << "] " << job->command << endl;
     }
 }
 
-QuitCommand::QuitCommand(char *cmd_line)  : BuiltInCommand(cmd_line){}
+QuitCommand::QuitCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-void QuitCommand::execute() {
+void QuitCommand::execute()
+{
     SmallShell &shell = SmallShell::getInstance();
     char *parsedArgs[COMMAND_MAX_ARGS] = {};
     _parseCommandLine(cmd_line, parsedArgs);
@@ -1109,14 +1217,18 @@ void QuitCommand::execute() {
     shell.getJobs()->removeFinishedJobs();
 
     cout << parsedArgs[1] << endl;
-    if (strcmp(parsedArgs[1], "kill") != 0) {
+    if (strcmp(parsedArgs[1], "kill") != 0)
+    {
         cout << "sara" << endl;
         exit(0);
-    } else {
+    }
+    else
+    {
         int totJobsKilled = shell.getJobs()->jobsList.size();
         cout << "smash: sending SIGKILL signal to " << totJobsKilled << " jobs:" << endl;
 
-        for (JobsList::JobEntry *job: shell.getJobs()->jobsList) {
+        for (JobsList::JobEntry *job : shell.getJobs()->jobsList)
+        {
             cout << job->pid << ": " << job->command << endl;
         }
         exit(0);
@@ -1304,7 +1416,7 @@ void ComplexExternalCommand::execute()
 }
 
 /////////////////////////////--------------Special commands-------//////////////////////////////
-WhoAmICommand::WhoAmICommand(char *cmd_line) : Command(cmd_line){}
+WhoAmICommand::WhoAmICommand(char *cmd_line) : Command(cmd_line) {}
 
 void WhoAmICommand::execute()
 {
@@ -1719,7 +1831,8 @@ UsbInfoCommand::UsbInfoCommand(char *cmd_line) : Command(cmd_line)
     createSegments(cmd_line, cmd_segments);
 }
 
-string UsbInfoCommand::read_sys_file(const string &path){
+string UsbInfoCommand::read_sys_file(const string &path)
+{
     int fd = open(path.c_str(), O_RDONLY);
     if (fd < 0)
         return "N/A";
