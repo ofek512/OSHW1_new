@@ -15,7 +15,6 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
-#include <sys/utsname.h>
 #include <time.h>
 #include <algorithm>
 
@@ -1074,34 +1073,142 @@ SysinfoCommand::SysinfoCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void SysinfoCommand::execute()
 {
-    // 1. Get System, Hostname, Kernel, and Architecture
-    struct utsname sys_info;
-    if (uname(&sys_info) == -1)
-    {
-        perror("smash error: uname failed");
-        return;
-    }
+    char buffer[256];
+    ssize_t bytes_read;
+    int fd;
 
-    // 2. Get Boot Time from /proc/stat
-    int fd = open("/proc/stat", O_RDONLY);
+    // 1. Get System from /proc/sys/kernel/ostype
+    fd = open("/proc/sys/kernel/ostype", O_RDONLY);
     if (fd < 0)
     {
         perror("smash error: open failed");
         return;
     }
-
-    char buffer[8192]; // Buffer to read /proc/stat
-    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+    bytes_read = read(fd, buffer, sizeof(buffer) - 1);
     close(fd);
-
     if (bytes_read <= 0)
     {
         perror("smash error: read failed");
         return;
     }
-    buffer[bytes_read] = '\0'; // Null-terminate the buffer
-    // Find the "btime" line
-    char *btime_line = strstr(buffer, "btime ");
+    buffer[bytes_read] = '\0';
+    string system_name = _trim(string(buffer));
+
+    // 2. Get Hostname from /proc/sys/kernel/hostname
+    fd = open("/proc/sys/kernel/hostname", O_RDONLY);
+    if (fd < 0)
+    {
+        perror("smash error: open failed");
+        return;
+    }
+    bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+    close(fd);
+    if (bytes_read <= 0)
+    {
+        perror("smash error: read failed");
+        return;
+    }
+    buffer[bytes_read] = '\0';
+    string hostname = _trim(string(buffer));
+
+    // 3. Get Kernel from /proc/sys/kernel/osrelease
+    fd = open("/proc/sys/kernel/osrelease", O_RDONLY);
+    if (fd < 0)
+    {
+        perror("smash error: open failed");
+        return;
+    }
+    bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+    close(fd);
+    if (bytes_read <= 0)
+    {
+        perror("smash error: read failed");
+        return;
+    }
+    buffer[bytes_read] = '\0';
+    string kernel = _trim(string(buffer));
+
+    // 4. Get Architecture from /proc/cpuinfo
+    fd = open("/proc/cpuinfo", O_RDONLY);
+    if (fd < 0)
+    {
+        perror("smash error: open failed");
+        return;
+    }
+    char large_buffer[4096];
+    bytes_read = read(fd, large_buffer, sizeof(large_buffer) - 1);
+    close(fd);
+    if (bytes_read <= 0)
+    {
+        perror("smash error: read failed");
+        return;
+    }
+    large_buffer[bytes_read] = '\0';
+
+    // Parse architecture from cpuinfo
+    string architecture = "unknown";
+    char *line = strtok(large_buffer, "\n");
+    while (line)
+    {
+        if (strstr(line, "model name") != nullptr)
+        {
+            char *colon = strchr(line, ':');
+            if (colon)
+            {
+                string model = _trim(string(colon + 1));
+                // Determine architecture based on model name
+                if (model.find("x86_64") != string::npos || model.find("Intel") != string::npos || model.find("AMD") != string::npos)
+                {
+                    architecture = "x86_64";
+                }
+                else if (model.find("ARM") != string::npos || model.find("aarch64") != string::npos)
+                {
+                    architecture = "aarch64";
+                }
+                break;
+            }
+        }
+        line = strtok(nullptr, "\n");
+    }
+
+    // If still unknown, try to read from /proc/sys/kernel/arch (may not exist on all systems)
+    if (architecture == "unknown")
+    {
+        fd = open("/proc/sys/kernel/arch", O_RDONLY);
+        if (fd >= 0)
+        {
+            bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+            close(fd);
+            if (bytes_read > 0)
+            {
+                buffer[bytes_read] = '\0';
+                architecture = _trim(string(buffer));
+            }
+        }
+        else
+        {
+            // Default to x86_64 if we can't determine
+            architecture = "x86_64";
+        }
+    }
+
+    // 5. Get Boot Time from /proc/stat
+    fd = open("/proc/stat", O_RDONLY);
+    if (fd < 0)
+    {
+        perror("smash error: open failed");
+        return;
+    }
+    bytes_read = read(fd, large_buffer, sizeof(large_buffer) - 1);
+    close(fd);
+    if (bytes_read <= 0)
+    {
+        perror("smash error: read failed");
+        return;
+    }
+    large_buffer[bytes_read] = '\0';
+
+    char *btime_line = strstr(large_buffer, "btime ");
     if (btime_line == nullptr)
     {
         cerr << "smash error: could not parse /proc/stat for btime" << endl;
@@ -1122,11 +1229,11 @@ void SysinfoCommand::execute()
     char time_str[100];
     strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
 
-    // 3. Print all information
-    cout << "System: " << sys_info.sysname << endl;
-    cout << "Hostname: " << sys_info.nodename << endl;
-    cout << "Kernel: " << sys_info.release << endl;
-    cout << "Architecture: " << sys_info.machine << endl;
+    // 6. Print all information
+    cout << "System: " << system_name << endl;
+    cout << "Hostname: " << hostname << endl;
+    cout << "Kernel: " << kernel << endl;
+    cout << "Architecture: " << architecture << endl;
     cout << "Boot Time: " << time_str << endl;
 }
 
