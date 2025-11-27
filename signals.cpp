@@ -22,6 +22,4 @@ void ctrlCHandler(int sig_num)
         cout << "smash: process " << smash.current_process << " was killed" << endl;
         smash.current_process = -1;
     }
-
-    cout << smash.getPrompt() << "> ";
 }
