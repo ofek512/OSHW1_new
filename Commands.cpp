@@ -1906,15 +1906,6 @@ void DiskUsageCommand::execute()
         dir_path = cmd_segments[1].c_str();
     }
 
-    // Check if directory exists
-    DIR *dir = opendir(dir_path);
-    if (dir == NULL)
-    {
-        std::cerr << "smash error: du: directory " << dir_path << " does not exist" << std::endl;
-        return;
-    }
-    closedir(dir);
-
     // Clear the inode tracking set before calculation
     counted_inodes.clear();
 

@@ -2,7 +2,7 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 using namespace std;
- #include <vector>
+#include <vector>
 #include <list>
 #include <unordered_map>
 #include <unordered_set>
@@ -112,7 +112,7 @@ private:
     map<string, string> aliasMap;
     vector<string> aliasCreationOrder;
     string prompt;
-    //char *prevWorkingDir;
+    // char *prevWorkingDir;
     string prevWorkingDir;
     JobsList *jobList;
     vector<string> commands;
@@ -140,7 +140,7 @@ public:
     void setPrompt(string newPrompt);
     string getPrompt() const;
     string getPrevWorkingDir() const;
-    void setPrevWorkingDir(const std::string& newDir);
+    void setPrevWorkingDir(const std::string &newDir);
     JobsList *getJobs();
     void getAllAlias(std::vector<std::string> &aliases);
     string getAlias(string name);
@@ -172,7 +172,8 @@ public:
     void execute() override;
 }; // DONE
 
-class ChpromptCommand : public BuiltInCommand{
+class ChpromptCommand : public BuiltInCommand
+{
 public:
     explicit ChpromptCommand(char *cmd_line);
 
@@ -181,7 +182,8 @@ public:
     void execute() override;
 };
 
-class PwdCommand : public BuiltInCommand{
+class PwdCommand : public BuiltInCommand
+{
 public:
     explicit PwdCommand(char *cmd_line);
 
@@ -190,7 +192,8 @@ public:
     void execute() override;
 };
 
-class CdCommand : public BuiltInCommand{
+class CdCommand : public BuiltInCommand
+{
 public:
     explicit CdCommand(char *cmd_line);
 
@@ -199,7 +202,8 @@ public:
     void execute() override;
 }; // DONE
 
-class FGCommand : public BuiltInCommand {
+class FGCommand : public BuiltInCommand
+{
 public:
     explicit FGCommand(char *cmd_line);
 
@@ -208,7 +212,8 @@ public:
     void execute() override;
 }; // DONE
 
-class KillCommand : public BuiltInCommand {
+class KillCommand : public BuiltInCommand
+{
 public:
     explicit KillCommand(char *cmd_line);
 
@@ -217,14 +222,16 @@ public:
     void execute() override;
 };
 
-class JobsCommand : public BuiltInCommand {
+class JobsCommand : public BuiltInCommand
+{
 public:
     explicit JobsCommand(char *cmd_line);
-    virtual  ~JobsCommand() = default;
+    virtual ~JobsCommand() = default;
     void execute() override;
 };
 
-class AliasCommand : public BuiltInCommand {
+class AliasCommand : public BuiltInCommand
+{
 public:
     explicit AliasCommand(char *cmd_line);
 
@@ -233,7 +240,8 @@ public:
     void execute() override;
 };
 
-class QuitCommand : public BuiltInCommand{
+class QuitCommand : public BuiltInCommand
+{
 public:
     explicit QuitCommand(char *cmd_line);
 
@@ -242,21 +250,24 @@ public:
     void execute() override;
 };
 
-class UnaliasCommand : public BuiltInCommand {
+class UnaliasCommand : public BuiltInCommand
+{
 public:
     explicit UnaliasCommand(char *cmd_line);
     virtual ~UnaliasCommand() = default;
     void execute() override;
 };
 
-class UnsetenvCommand : public BuiltInCommand {
+class UnsetenvCommand : public BuiltInCommand
+{
 public:
     explicit UnsetenvCommand(char *cmd_line);
     virtual ~UnsetenvCommand() = default;
     void execute() override;
 };
 
-class SysinfoCommand : public BuiltInCommand {
+class SysinfoCommand : public BuiltInCommand
+{
 public:
     explicit SysinfoCommand(char *cmd_line);
     virtual ~SysinfoCommand() = default;
@@ -300,7 +311,7 @@ public:
 
     ExternalCommand(char *cmd_line);
 
-    virtual ~ExternalCommand(){}
+    virtual ~ExternalCommand() {}
 
     string getCommandS() override;
 
@@ -319,8 +330,6 @@ public:
 
     void execute() override;
 }; // DONE
-
-
 
 /////////////////////////////--------------Special commands-------//////////////////////////////
 
@@ -374,10 +383,9 @@ class WhoAmICommand : public Command
 {
 public:
     WhoAmICommand(char *cmd_line);
-    virtual ~WhoAmICommand(){}
+    virtual ~WhoAmICommand() {}
     void execute() override;
 };
-
 
 class DiskUsageCommand : public Command
 {
@@ -393,6 +401,17 @@ private:
             return 0; // can't stat this entry
         }
 
+        // If it's a symlink, don't follow it - just count its own size
+        if (S_ISLNK(st.st_mode))
+        {
+            // Only count each inode once
+            if (counted_inodes.insert(st.st_ino).second == false)
+            {
+                return 0;
+            }
+            return st.st_blocks * 512;
+        }
+
         // Only count each inode once (prevents double-counting hard links)
         if (counted_inodes.insert(st.st_ino).second == false)
         {
@@ -402,8 +421,8 @@ private:
         // Start with this entry's blocks
         long size = st.st_blocks * 512;
 
-        // If it's a directory (and not a symlink) recurse into it
-        if (S_ISDIR(st.st_mode) && !S_ISLNK(st.st_mode))
+        // If it's a directory, recurse into it
+        if (S_ISDIR(st.st_mode))
         {
             int fd = open(path, O_RDONLY | O_DIRECTORY);
             if (fd < 0)
