@@ -232,6 +232,25 @@ Command *SmallShell::CreateCommand(char *cmd_line)
     std::string cmd_s = _trim(std::string(cmd_line));
     std::string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
+    if (firstWord == "alias")
+    {
+        std::string cmd_for_check = cmd_s;
+        if (_isBackgroundComamnd(cmd_line))
+        {
+            size_t lastAmp = cmd_for_check.find_last_of('&');
+            if (lastAmp != std::string::npos)
+            {
+                cmd_for_check = cmd_for_check.substr(0, lastAmp);
+                cmd_for_check = _trim(cmd_for_check);
+            }
+        }
+        static const std::regex aliasPattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
+        if (std::regex_match(cmd_for_check, aliasPattern))
+        {
+            return new AliasCommand(cmd_line);
+        }
+    }
+
     // Pipe command
     if (strstr(cmd_line, "|&"))
     {
