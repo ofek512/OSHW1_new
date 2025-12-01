@@ -1323,10 +1323,8 @@ void QuitCommand::execute()
 
     shell.getJobs()->removeFinishedJobs();
 
-    cout << parsedArgs[1] << endl;
     if (strcmp(parsedArgs[1], "kill") != 0)
     {
-        cout << "sara" << endl;
         exit(0);
     }
     else
@@ -1599,10 +1597,11 @@ void WhoAmICommand::execute()
             {
                 home_dir = entry.substr(0, pos);
 
+                std::cout << username << endl;
                 // --- NEW OUTPUT FORMAT [cite: 423-425] ---
                 std::cout << uid << std::endl;
                 std::cout << gid << std::endl;
-                std::cout << username << " " << home_dir << std::endl;
+                std::cout << home_dir << std::endl;
                 // --- END OF NEW FORMAT ---
 
                 return; // Found user, we are done
@@ -2027,6 +2026,7 @@ void UsbInfoCommand::execute()
     std::sort(devices.begin(), devices.end());
 
     // Print all devices in the correct format
+
     for (const auto &dev : devices)
     {
         cout << "Device " << dev.devnum << ": ID " << dev.id << " "
