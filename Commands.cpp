@@ -234,21 +234,7 @@ Command *SmallShell::CreateCommand(char *cmd_line)
 
     if (firstWord == "alias")
     {
-        std::string cmd_for_check = cmd_s;
-        if (_isBackgroundComamnd(cmd_line))
-        {
-            size_t lastAmp = cmd_for_check.find_last_of('&');
-            if (lastAmp != std::string::npos)
-            {
-                cmd_for_check = cmd_for_check.substr(0, lastAmp);
-                cmd_for_check = _trim(cmd_for_check);
-            }
-        }
-        static const std::regex aliasPattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
-        if (std::regex_match(cmd_for_check, aliasPattern))
-        {
-            return new AliasCommand(cmd_line);
-        }
+        return new AliasCommand(cmd_line);
     }
 
     // Pipe command
@@ -940,7 +926,7 @@ void AliasCommand::execute()
     full_command = _trim(full_command);
     static const std::regex aliasPattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
     std::smatch matches;
-    bool matched = std::regex_search(full_command, matches, aliasPattern);
+    bool matched = std::regex_match(full_command, matches, aliasPattern);
 
     if (!matched)
     {
