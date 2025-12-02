@@ -207,7 +207,6 @@ SmallShell::~SmallShell()
 }
 
 
-// Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 Command *SmallShell::CreateCommand(char *cmd_line)
 {
     std::string cmd_trimmed = _trim(std::string(cmd_line));
@@ -242,7 +241,6 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         return new PipeCommand(cmd_line, PipeCommand::STDOUT);
     }
 
-    // Redirection command - CHECK BEFORE built-in commands!
     if (strstr(cmd_line, ">>"))
     {
         return new RedirectionCommand(cmd_line, RedirectionCommand::CONCAT);
@@ -285,7 +283,7 @@ Command *SmallShell::CreateCommand(char *cmd_line)
     }
     else if (firstWord == "quit")
     {
-        return new QuitCommand(cmd_line);
+        return new QuitCommand(cmd_line, jobList);
     }
     else if (firstWord == "fg")
     {
@@ -374,14 +372,12 @@ void SmallShell::executeCommand(char *cmd_line)
         {
             return;
         }
-        // Set the alias name so the command knows its original form
         cmd->updateAlias(cmd_line);
         cmd->execute();
         delete cmd;
     }
     else
     {
-        // Not an alias
         Command *cmd = CreateCommand(cmd_line);
         if (cmd == nullptr)
         {
@@ -477,6 +473,7 @@ void JobsList::clearFinishedJobs() {
         }
     }
 }
+
 
 void JobsList::printJobsBeforeQuit() {
     // remove finished jobs before printing the jobs.
@@ -1305,33 +1302,36 @@ void JobsCommand::execute()
     }
 }
 
-QuitCommand::QuitCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
+QuitCommand::QuitCommand(char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), jobs(jobs) {}
 
 void QuitCommand::execute()
 {
     SmallShell &shell = SmallShell::getInstance();
     char *parsedArgs[COMMAND_MAX_ARGS] = {};
-    _parseCommandLine(cmd_line, parsedArgs);
+
+    // capture the number of arguments returned by the parser
+    int num_args = _parseCommandLine(cmd_line, parsedArgs);
 
     shell.getJobs()->clearFinishedJobs();
 
-    if (strcmp(parsedArgs[1], "kill") != 0)
+    // check if enough arguments exist before checking specific values
+    if (num_args > 1 && parsedArgs[1] != nullptr && strcmp(parsedArgs[1], "kill") == 0)
     {
+        jobs->clearFinishedJobs();
+        jobs->printJobsBeforeQuit();
+        jobs->killAllJobs();
+
+        free_args(parsedArgs, num_args);
         exit(0);
     }
     else
     {
-        int totJobsKilled = shell.getJobs()->jobsList.size();
-        cout << "smash: sending SIGKILL signal to " << totJobsKilled << " jobs:" << endl;
-
-        for (JobsList::JobEntry *job : shell.getJobs()->jobsList)
-        {
-            cout << job->pid << ": " << job->command << endl;
-        }
+        free_args(parsedArgs, num_args);
         exit(0);
     }
 }
-/////////////////////////////--------------External commands-------//////////////////////////////
+
+////////////////////--------------External commands-------////////////////
 
 ExternalCommand::ExternalCommand(char *cmd_line) : Command(cmd_line)
 {
