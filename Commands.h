@@ -55,8 +55,8 @@ public:
 
     virtual string getCommandS();
     string printCommand();
-    bool hasAlias();
-    void setAlias(string command);
+    bool isAliased();
+    void updateAlias(string command);
 };
 
 class JobsList
@@ -91,7 +91,7 @@ public:
 
     void killAllJobs();
 
-    void removeFinishedJobs();
+    void clearFinishedJobs();
 
     JobEntry *getJobById(int jobId);
 
@@ -112,7 +112,6 @@ private:
     map<string, string> aliasMap;
     vector<string> aliasCreationOrder;
     string prompt;
-    // char *prevWorkingDir;
     string prevWorkingDir;
     JobsList *jobList;
     vector<string> commands;
@@ -146,7 +145,7 @@ public:
     string getAlias(string name);
     bool validCommand(string name);
     void createCommandVector();
-    void setAlias(string name, string command);
+    void updateAlias(string name, string command);
     bool removeAlias(string name);
 };
 
@@ -170,7 +169,7 @@ public:
     virtual ~ShowPidCommand() = default;
 
     void execute() override;
-}; // DONE
+};
 
 class ChpromptCommand : public BuiltInCommand
 {
@@ -200,7 +199,7 @@ public:
     virtual ~CdCommand() = default;
 
     void execute() override;
-}; // DONE
+};
 
 class FGCommand : public BuiltInCommand
 {
@@ -210,7 +209,7 @@ public:
     virtual ~FGCommand() = default;
 
     void execute() override;
-}; // DONE
+};
 
 class KillCommand : public BuiltInCommand
 {
@@ -226,7 +225,9 @@ class JobsCommand : public BuiltInCommand
 {
 public:
     explicit JobsCommand(char *cmd_line);
+
     virtual ~JobsCommand() = default;
+
     void execute() override;
 };
 
@@ -243,7 +244,8 @@ public:
 class QuitCommand : public BuiltInCommand
 {
 public:
-    explicit QuitCommand(char *cmd_line);
+    JobsList *jobs;
+    explicit QuitCommand(char *cmd_line, JobsList *jobs);
 
     virtual ~QuitCommand() = default;
 
@@ -254,7 +256,9 @@ class UnaliasCommand : public BuiltInCommand
 {
 public:
     explicit UnaliasCommand(char *cmd_line);
+
     virtual ~UnaliasCommand() = default;
+
     void execute() override;
 };
 
@@ -262,7 +266,9 @@ class UnsetenvCommand : public BuiltInCommand
 {
 public:
     explicit UnsetenvCommand(char *cmd_line);
+
     virtual ~UnsetenvCommand() = default;
+
     void execute() override;
 };
 
@@ -270,7 +276,9 @@ class SysinfoCommand : public BuiltInCommand
 {
 public:
     explicit SysinfoCommand(char *cmd_line);
+
     virtual ~SysinfoCommand() = default;
+
     void execute() override;
 };
 
@@ -294,15 +302,16 @@ private:
     };
 
     // Helper function to read a file from /sys
-    // NOTE: This assumes you have the _trim function available,
-    // which is defined at the top of your Commands.cpp
-    string read_sys_file(const string &path);
+    string readSysFile(const string &path);
 
 public:
     UsbInfoCommand(char *cmd_line);
+
     virtual ~UsbInfoCommand() {}
+
     void execute() override;
 };
+
 //////////////////////////////--------------External commands-------/////////////////////////////
 class ExternalCommand : public Command
 {
@@ -316,20 +325,19 @@ public:
     string getCommandS() override;
 
     void execute() override;
-}; // DONE
+};
 
 class ComplexExternalCommand : public Command
 {
 public:
     char *bash_args[4];
+
     ComplexExternalCommand(char *cmd_line);
 
-    virtual ~ComplexExternalCommand()
-    {
-    }
+    virtual ~ComplexExternalCommand(){}
 
     void execute() override;
-}; // DONE
+};
 
 /////////////////////////////--------------Special commands-------//////////////////////////////
 
@@ -353,7 +361,7 @@ public:
     virtual ~RedirectionCommand();
 
     void execute() override;
-}; // DONE
+};
 
 class PipeCommand : public Command
 {
@@ -383,7 +391,9 @@ class WhoAmICommand : public Command
 {
 public:
     WhoAmICommand(char *cmd_line);
+
     virtual ~WhoAmICommand() {}
+
     void execute() override;
 };
 
@@ -454,7 +464,7 @@ private:
                     // Recurse
                     size += calculate_dir_size(child_path);
 
-                    bpos += d->d_reclen; // Move to next entry
+                    bpos += d->d_reclen; // woof
                 }
             }
 
@@ -472,11 +482,8 @@ private:
 public:
     DiskUsageCommand(char *cmd_line);
 
-    virtual ~DiskUsageCommand()
-    {
-    }
+    virtual ~DiskUsageCommand(){}
 
-    // execute() method in Commands.cpp does not need to be changed.
     void execute() override;
 };
 
