@@ -244,7 +244,8 @@ public:
 class QuitCommand : public BuiltInCommand
 {
 public:
-    explicit QuitCommand(char *cmd_line);
+    JobsList *jobs;
+    explicit QuitCommand(char *cmd_line, JobsList *jobs);
 
     virtual ~QuitCommand() = default;
 
@@ -463,7 +464,7 @@ private:
                     // Recurse
                     size += calculate_dir_size(child_path);
 
-                    bpos += d->d_reclen; // Move to next entry
+                    bpos += d->d_reclen; // woof
                 }
             }
 
