@@ -138,9 +138,7 @@ char **init_args()
 bool is_legit_num(const string &s)
 {
     auto it = s.begin();
-    for (; it != s.end() && std::isdigit(*it); it++)
-    {
-    }
+    for (; it != s.end() && std::isdigit(*it); it++){}
     return it == s.end();
 }
 
@@ -208,6 +206,8 @@ SmallShell::~SmallShell()
     delete jobList;
 }
 
+
+// Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 Command *SmallShell::CreateCommand(char *cmd_line)
 {
     std::string cmd_trimmed = _trim(std::string(cmd_line));
@@ -242,6 +242,7 @@ Command *SmallShell::CreateCommand(char *cmd_line)
         return new PipeCommand(cmd_line, PipeCommand::STDOUT);
     }
 
+    // Redirection command - CHECK BEFORE built-in commands!
     if (strstr(cmd_line, ">>"))
     {
         return new RedirectionCommand(cmd_line, RedirectionCommand::CONCAT);
@@ -373,12 +374,14 @@ void SmallShell::executeCommand(char *cmd_line)
         {
             return;
         }
+        // Set the alias name so the command knows its original form
         cmd->updateAlias(cmd_line);
         cmd->execute();
         delete cmd;
     }
     else
     {
+        // Not an alias
         Command *cmd = CreateCommand(cmd_line);
         if (cmd == nullptr)
         {
@@ -459,35 +462,27 @@ bool isFinished(JobsList::JobEntry *job)
     }
 }
 
-void JobsList::clearFinishedJobs()
-{
-    for (auto it = jobsList.begin(); it != jobsList.end();)
-    {
-        if (isFinished(*it) && (*it)->cmd != NULL)
-        {
+void JobsList::clearFinishedJobs() {
+    for (auto it = jobsList.begin(); it != jobsList.end();) {
+        if (isFinished(*it) && (*it)->cmd != NULL) {
             job_map.erase((*it)->jobId);
             auto temp_it = it;
             it = jobsList.erase(it); // erase returns the next valid iterator
-            if (max_id == (*temp_it)->jobId)
-            {
+            if (max_id == (*temp_it)->jobId) {
                 jobsList.sort();
                 max_id = jobsList.empty() ? -1 : jobsList.back()->jobId;
             }
-        }
-        else
-        {
+        } else {
             ++it;
         }
     }
 }
 
-void JobsList::printJobsBeforeQuit()
-{
+void JobsList::printJobsBeforeQuit() {
     // remove finished jobs before printing the jobs.
     clearFinishedJobs();
     std::cout << "smash: sending SIGKILL signal to " << jobsList.size() << " jobs:" << std::endl;
-    for (auto listIt = jobsList.begin(); listIt != jobsList.end(); ++listIt)
-    {
+    for (auto listIt = jobsList.begin(); listIt != jobsList.end(); ++listIt) {
         JobsList::JobEntry *job = *listIt;
         std::cout << job->pid << ": " << job->command << std::endl;
     }
@@ -551,6 +546,7 @@ void JobsList::addJob(Command *cmd, pid_t pid, bool isStopped)
     jobsList.push_back(job_to_insert);
 
     max_id = newJobId;
+
 }
 
 bool JobsList::JobEntry::operator<(const JobsList::JobEntry &other) const
@@ -978,7 +974,7 @@ void AliasCommand::execute()
     full_command = _trim(full_command);
     static const std::regex aliasPattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
     std::smatch matches;
-    bool matched = std::regex_match(full_command, matches, aliasPattern);
+    bool matched = std::regex_search(full_command, matches, aliasPattern);
 
     if (!matched)
     {
@@ -1294,6 +1290,7 @@ void SysinfoCommand::execute()
     cout << "Boot Time: " << time_str << endl;
 }
 
+
 JobsCommand::JobsCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void JobsCommand::execute()
@@ -1310,8 +1307,7 @@ void JobsCommand::execute()
 
 QuitCommand::QuitCommand(char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), jobs(jobs) {}
 
-void QuitCommand::execute()
-{
+void QuitCommand::execute() {
     SmallShell &shell = SmallShell::getInstance();
     char *parsedArgs[COMMAND_MAX_ARGS] = {};
 
@@ -1321,23 +1317,19 @@ void QuitCommand::execute()
     shell.getJobs()->clearFinishedJobs();
 
     // check if enough arguments exist before checking specific values
-    if (num_args > 1 && parsedArgs[1] != nullptr && strcmp(parsedArgs[1], "kill") == 0)
-    {
+    if (num_args > 1 && parsedArgs[1] != nullptr && strcmp(parsedArgs[1], "kill") == 0) {
         jobs->clearFinishedJobs();
         jobs->printJobsBeforeQuit();
         jobs->killAllJobs();
 
         free_args(parsedArgs, num_args);
         exit(0);
-    }
-    else
-    {
+    } else {
         free_args(parsedArgs, num_args);
         exit(0);
     }
 }
-
-////////////////////--------------External commands-------////////////////
+/////////////////////////////--------------External commands-------//////////////////////////////
 
 ExternalCommand::ExternalCommand(char *cmd_line) : Command(cmd_line)
 {
