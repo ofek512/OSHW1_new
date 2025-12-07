@@ -334,7 +334,7 @@ public:
 
     ComplexExternalCommand(char *cmd_line);
 
-    virtual ~ComplexExternalCommand(){}
+    virtual ~ComplexExternalCommand() {}
 
     void execute() override;
 };
@@ -482,7 +482,7 @@ private:
 public:
     DiskUsageCommand(char *cmd_line);
 
-    virtual ~DiskUsageCommand(){}
+    virtual ~DiskUsageCommand() {}
 
     void execute() override;
 };
