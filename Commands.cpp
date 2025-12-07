@@ -138,7 +138,9 @@ char **init_args()
 bool is_legit_num(const string &s)
 {
     auto it = s.begin();
-    for (; it != s.end() && std::isdigit(*it); it++){}
+    for (; it != s.end() && std::isdigit(*it); it++)
+    {
+    }
     return it == s.end();
 }
 
@@ -155,9 +157,6 @@ bool get_signal_number(char *input, int &signum)
         return false;
     }
     signum = stoi(temp);
-
-    if (signum > 31)
-        return false;
 
     return true;
 }
@@ -205,7 +204,6 @@ SmallShell::~SmallShell()
 {
     delete jobList;
 }
-
 
 // Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 Command *SmallShell::CreateCommand(char *cmd_line)
@@ -462,27 +460,35 @@ bool isFinished(JobsList::JobEntry *job)
     }
 }
 
-void JobsList::clearFinishedJobs() {
-    for (auto it = jobsList.begin(); it != jobsList.end();) {
-        if (isFinished(*it) && (*it)->cmd != NULL) {
+void JobsList::clearFinishedJobs()
+{
+    for (auto it = jobsList.begin(); it != jobsList.end();)
+    {
+        if (isFinished(*it) && (*it)->cmd != NULL)
+        {
             job_map.erase((*it)->jobId);
             auto temp_it = it;
             it = jobsList.erase(it); // erase returns the next valid iterator
-            if (max_id == (*temp_it)->jobId) {
+            if (max_id == (*temp_it)->jobId)
+            {
                 jobsList.sort();
                 max_id = jobsList.empty() ? -1 : jobsList.back()->jobId;
             }
-        } else {
+        }
+        else
+        {
             ++it;
         }
     }
 }
 
-void JobsList::printJobsBeforeQuit() {
+void JobsList::printJobsBeforeQuit()
+{
     // remove finished jobs before printing the jobs.
     clearFinishedJobs();
     std::cout << "smash: sending SIGKILL signal to " << jobsList.size() << " jobs:" << std::endl;
-    for (auto listIt = jobsList.begin(); listIt != jobsList.end(); ++listIt) {
+    for (auto listIt = jobsList.begin(); listIt != jobsList.end(); ++listIt)
+    {
         JobsList::JobEntry *job = *listIt;
         std::cout << job->pid << ": " << job->command << std::endl;
     }
@@ -546,7 +552,6 @@ void JobsList::addJob(Command *cmd, pid_t pid, bool isStopped)
     jobsList.push_back(job_to_insert);
 
     max_id = newJobId;
-
 }
 
 bool JobsList::JobEntry::operator<(const JobsList::JobEntry &other) const
@@ -931,12 +936,12 @@ void KillCommand::execute()
     }
     if (kill(job->pid, signum) < 0)
     {
-        cerr << "smash error: kill failed" << endl;
+        perror("smash error: kill failed");
         free_args(args, num_of_args);
         return;
     }
 
-    cout << "signal " << signum << " was sent to pid " << job->pid << endl;
+    cout << "signal number " << signum << " was sent to pid " << job->pid << endl;
     if (signum == SIGSTOP)
     {
         job->isStopped = true;
@@ -1290,7 +1295,6 @@ void SysinfoCommand::execute()
     cout << "Boot Time: " << time_str << endl;
 }
 
-
 JobsCommand::JobsCommand(char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void JobsCommand::execute()
@@ -1307,7 +1311,8 @@ void JobsCommand::execute()
 
 QuitCommand::QuitCommand(char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), jobs(jobs) {}
 
-void QuitCommand::execute() {
+void QuitCommand::execute()
+{
     SmallShell &shell = SmallShell::getInstance();
     char *parsedArgs[COMMAND_MAX_ARGS] = {};
 
@@ -1317,17 +1322,14 @@ void QuitCommand::execute() {
     shell.getJobs()->clearFinishedJobs();
 
     // check if enough arguments exist before checking specific values
-    if (num_args > 1 && parsedArgs[1] != nullptr && strcmp(parsedArgs[1], "kill") == 0) {
-        jobs->clearFinishedJobs();
+    if (num_args > 1 && parsedArgs[1] != nullptr && strcmp(parsedArgs[1], "kill") == 0)
+    {
         jobs->printJobsBeforeQuit();
         jobs->killAllJobs();
-
-        free_args(parsedArgs, num_args);
-        exit(0);
-    } else {
-        free_args(parsedArgs, num_args);
-        exit(0);
     }
+    free_args(parsedArgs, num_args);
+    std::cout.flush();
+    exit(0);
 }
 /////////////////////////////--------------External commands-------//////////////////////////////
 
