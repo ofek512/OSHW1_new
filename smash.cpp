@@ -26,12 +26,16 @@ int main(int argc, char *argv[])
             continue;         // Skip to next iteration to print prompt again
         }
 
+        // If we got a command, execute it even if EOF is reached
+        if (!cmd_line.empty())
+        {
+            smash.executeCommand(const_cast<char *>(cmd_line.c_str()));
+        }
+
         if (std::cin.eof())
         {
             break; // Exit on EOF (Ctrl+D)
         }
-
-        smash.executeCommand(const_cast<char *>(cmd_line.c_str()));
     }
     return 0;
 }
