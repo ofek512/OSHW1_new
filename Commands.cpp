@@ -1972,20 +1972,15 @@ void UsbInfoCommand::execute()
 
             if (devnum_str == "N/A")
             {
-                // This isn't a device directory (e.g., it's "usb1", not "1-1")
                 continue;
             }
 
-            // --- FILTERING LOGIC START ---
             string vendor = readSysFile(dev_path + "/idVendor");
 
-            // Check for Linux Foundation root hubs (1d6b) and skip them
             if (vendor == "1d6b")
             {
                 continue;
             }
-            // --- FILTERING LOGIC END ---
-
             // This is a real device, collect its info
             UsbDevice dev;
             try
@@ -2023,7 +2018,6 @@ void UsbInfoCommand::execute()
 
     std::sort(devices.begin(), devices.end());
 
-    // Print all devices in the correct format
     for (const auto &dev : devices)
     {
         cout << "Device " << dev.devnum << ": ID " << dev.id << " "
