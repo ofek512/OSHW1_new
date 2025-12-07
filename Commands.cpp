@@ -1934,6 +1934,7 @@ string UsbInfoCommand::readSysFile(const string &path)
     buf[n] = '\0';
     return _trim(string(buf)); // Using your existing _trim function
 }
+
 void UsbInfoCommand::execute()
 {
     vector<UsbDevice> devices;
@@ -1975,6 +1976,16 @@ void UsbInfoCommand::execute()
                 continue;
             }
 
+            // --- FILTERING LOGIC START ---
+            string vendor = readSysFile(dev_path + "/idVendor");
+
+            // Check for Linux Foundation root hubs (1d6b) and skip them
+            if (vendor == "1d6b")
+            {
+                continue;
+            }
+            // --- FILTERING LOGIC END ---
+
             // This is a real device, collect its info
             UsbDevice dev;
             try
@@ -1986,7 +1997,6 @@ void UsbInfoCommand::execute()
                 continue; // Skip if devnum isn't a number
             }
 
-            string vendor = readSysFile(dev_path + "/idVendor");
             string product_id = readSysFile(dev_path + "/idProduct");
 
             dev.id = vendor + ":" + product_id;
@@ -2005,18 +2015,15 @@ void UsbInfoCommand::execute()
         return;
     }
 
-    // Check if any devices were found
     if (devices.empty())
     {
         cerr << "smash error: usbinfo: no USB devices found" << endl;
         return;
     }
 
-    // Sort devices by device number
     std::sort(devices.begin(), devices.end());
 
     // Print all devices in the correct format
-
     for (const auto &dev : devices)
     {
         cout << "Device " << dev.devnum << ": ID " << dev.id << " "
